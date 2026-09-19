@@ -1,56 +1,418 @@
-<footer>
-  <div class="footer__copyright">
-    &copy;
-    {{ 'now' | date: '%Y' }}
-    {{ shop.name | link_to: routes.root_url }}, {{ powered_by_link }}
-  </div>
+<!-- Full-Bleed Monolith Blueprint Footer -->
+<footer style="background-color: {{ section.settings.footer_bg }}; width: 100vw; margin-left: calc(-50vw + 50%); margin-right: calc(-50vw + 50%); max-width: 100vw; box-sizing: border-box; border-top: 1px solid {{ section.settings.grid_border }}; color: {{ section.settings.text_color }}; font-family: 'Inter', sans-serif;">
+  
+  <div style="max-width: 1400px; margin: 0 auto; padding: 60px 40px 40px 40px; box-sizing: border-box;">
+    
+    <!-- TOP ROW: Blueprint Technical Header (Newsletter + Live HQ Clock) -->
+    <div class="blueprint-top-row">
+      
+      <!-- Newsletter Block -->
+      <div class="blueprint-box newsletter-box">
+        <span class="blueprint-tag" style="color: {{ section.settings.accent_color }};">[ VIP_DISPATCH_LIST ]</span>
+        <h3 style="color: {{ section.settings.text_color }}; font-family: 'Oswald', sans-serif; font-size: clamp(1.5rem, 2.5vw, 2rem); font-weight: 700; text-transform: uppercase; margin: 12px 0 8px 0; letter-spacing: 0.05em;">
+          {{ section.settings.newsletter_title | default: "JOIN THE PRIVATE LIST" }}
+        </h3>
+        <p style="color: {{ section.settings.subtext_color }}; font-size: 13px; line-height: 1.5; margin: 0 0 24px 0; max-width: 480px;">
+          {{ section.settings.newsletter_subtext | default: "Receive direct notification upon vault unlocks, archival drops, and private releases." }}
+        </p>
 
-  <div class="footer__links">
-    {% for link in section.settings.menu.links %}
-      {{ link.title | link_to: link.url }}
-    {% endfor %}
-  </div>
+        {% form 'customer', class: 'blueprint-form' %}
+          <input type="hidden" name="contact[tags]" value="newsletter">
+          <div style="display: flex; gap: 0; width: 100%; max-width: 500px; position: relative;">
+            <input 
+              type="email" 
+              name="contact[email]" 
+              placeholder="ENTER EMAIL ADDRESS..." 
+              required
+              style="width: 100%; background: {{ section.settings.input_bg }}; color: {{ section.settings.text_color }}; border: 1px solid {{ section.settings.grid_border }}; padding: 14px 18px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; letter-spacing: 0.08em; outline: none; box-sizing: border-box;"
+            >
+            <button 
+              type="submit" 
+              style="background-color: {{ section.settings.accent_color }}; color: #0E0E0E; border: 1px solid {{ section.settings.accent_color }}; padding: 0 28px; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; cursor: pointer; transition: opacity 0.2s; white-space: nowrap;"
+              onmouseover="this.style.opacity='0.85'"
+              onmouseout="this.style.opacity='1'"
+            >
+              SUBMIT
+            </button>
+          </div>
+          {% if form.posted_successfully? %}
+            <p style="color: {{ section.settings.accent_color }}; font-size: 12px; margin-top: 10px; font-weight: 600;">ACCESS GRANTED. YOU ARE ON THE LIST.</p>
+          {% endif %}
+        {% endform %}
+      </div>
 
-  <div class="footer__payment">
-    {% if section.settings.show_payment_icons %}
-      {% for type in shop.enabled_payment_types %}
-        {{ type | payment_type_svg_tag }}
+      <!-- HQ Location & World Clock Box -->
+      <div class="blueprint-box hq-box">
+        <span class="blueprint-tag" style="color: {{ section.settings.accent_color }};">[ SYSTEM_TELEMETRY ]</span>
+        <div style="margin-top: 16px;">
+          <span style="font-family: 'Oswald', sans-serif; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: {{ section.settings.subtext_color }}; display: block; margin-bottom: 4px;">OPERATIONS HQ</span>
+          <span style="font-family: 'Oswald', sans-serif; font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: {{ section.settings.text_color }}; display: block;">
+            {{ section.settings.hq_location | default: "LOS ANGELES, CA" }}
+          </span>
+        </div>
+
+        <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid {{ section.settings.grid_border }};">
+          <span style="font-family: 'Oswald', sans-serif; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: {{ section.settings.subtext_color }}; display: block; margin-bottom: 4px;">LOCAL TIME</span>
+          <span id="BlueprintClock-{{ section.id }}" style="font-family: 'Oswald', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: 0.1em; color: {{ section.settings.accent_color }};">
+            00:00:00 PST
+          </span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- MIDDLE ROW: Blueprint Links Grid -->
+    <div class="blueprint-links-grid">
+      
+      <!-- Brand Specification Column -->
+      <div class="blueprint-box">
+        <span class="blueprint-tag" style="color: {{ section.settings.accent_color }};">[ ARCHIVE_INFO ]</span>
+        <h4 style="color: {{ section.settings.text_color }}; font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700; text-transform: uppercase; margin: 12px 0 16px 0; letter-spacing: 0.08em;">
+          {{ shop.name | default: "CROWN & BRIM CO." }}
+        </h4>
+        <p style="color: {{ section.settings.subtext_color }}; font-size: 12px; line-height: 1.6; margin: 0 0 20px 0;">
+          {{ section.settings.brand_bio | default: "Bespoke headwear engineered with heavyweight wools, structured buckram crowns, and precision craftsmanship." }}
+        </p>
+        
+        <!-- Social Links -->
+        <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+          {% if section.settings.social_instagram != blank %}
+            <a href="{{ section.settings.social_instagram }}" target="_blank" class="blueprint-social-link" style="color: {{ section.settings.subtext_color }};">IG</a>
+          {% endif %}
+          {% if section.settings.social_tiktok != blank %}
+            <a href="{{ section.settings.social_tiktok }}" target="_blank" class="blueprint-social-link" style="color: {{ section.settings.subtext_color }};">TK</a>
+          {% endif %}
+          {% if section.settings.social_x != blank %}
+            <a href="{{ section.settings.social_x }}" target="_blank" class="blueprint-social-link" style="color: {{ section.settings.subtext_color }};">X</a>
+          {% endif %}
+          {% if section.settings.social_youtube != blank %}
+            <a href="{{ section.settings.social_youtube }}" target="_blank" class="blueprint-social-link" style="color: {{ section.settings.subtext_color }};">YT</a>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Navigation Menu Blocks -->
+      {% for block in section.blocks %}
+        {% if block.type == 'menu' %}
+          <div class="blueprint-box" {{ block.shopify_attributes }}>
+            <span class="blueprint-tag" style="color: {{ section.settings.accent_color }};">[ INDEX_0{{ forloop.index }} ]</span>
+            <h4 style="color: {{ section.settings.text_color }}; font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700; text-transform: uppercase; margin: 12px 0 16px 0; letter-spacing: 0.08em;">
+              {{ block.settings.heading | default: block.settings.menu.title }}
+            </h4>
+            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;">
+              {% for link in block.settings.menu.links %}
+                <li>
+                  <a href="{{ link.url }}" class="blueprint-nav-link" style="color: {{ section.settings.subtext_color }}; text-decoration: none; font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; transition: color 0.2s;">
+                    {{ link.title }}
+                  </a>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
       {% endfor %}
-    {% endif %}
+
+    </div>
+
+    <!-- BOTTOM ROW: Copyright, Payment Icons & Currency -->
+    <div class="blueprint-bottom-bar">
+      <div>
+        <p style="font-size: 11px; color: {{ section.settings.subtext_color }}; margin: 0; letter-spacing: 0.08em;">
+          &copy; {{ 'now' | date: "%Y" }} {{ shop.name | uppercase }}. ALL RIGHTS RESERVED. ARCHIVAL SPECIFICATION.
+        </p>
+      </div>
+
+      <!-- Payment Icons -->
+      {% if section.settings.show_payment_icons %}
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          {% for type in shop.enabled_payment_types %}
+            {{ type | payment_type_svg_tag: class: 'payment-icon' }}
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
   </div>
 </footer>
 
-{% stylesheet %}
-  footer {
+<!-- Blueprint CSS Architecture -->
+<style>
+  html, body {
+    overflow-x: hidden;
+  }
+
+  .blueprint-top-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 0;
+    margin-bottom: 24px;
+  }
+
+  .blueprint-links-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+  }
+
+  .blueprint-box {
+    border: 1px solid {{ section.settings.grid_border }};
+    padding: 32px 28px;
+    box-sizing: border-box;
+    position: relative;
+    margin-top: -1px;
+    margin-left: -1px;
+  }
+
+  .blueprint-tag {
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    display: inline-block;
+  }
+
+  .blueprint-social-link {
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+    border: 1px solid {{ section.settings.grid_border }};
+    padding: 4px 10px;
+    transition: all 0.2s ease;
+  }
+
+  .blueprint-social-link:hover {
+    color: {{ section.settings.accent_color }} !important;
+    border-color: {{ section.settings.accent_color }};
+  }
+
+  .blueprint-nav-link:hover {
+    color: {{ section.settings.accent_color }} !important;
+  }
+
+  .blueprint-bottom-bar {
+    border: 1px solid {{ section.settings.grid_border }};
+    padding: 20px 28px;
+    margin-top: -1px;
     display: flex;
     justify-content: space-between;
-    margin-top: 2rem;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
   }
-  footer a {
-    text-decoration: none;
-    color: var(--color-foreground);
+
+  .payment-icon {
+    height: 22px;
+    width: auto;
+    filter: grayscale(1) brightness(0.8);
   }
-  footer .footer__links,
-  footer .footer__payment {
-    display: flex;
-    gap: 1rem;
+
+  /* Responsive Rules */
+  @media (max-width: 1024px) {
+    .blueprint-top-row {
+      grid-template-columns: 1fr;
+    }
+    .blueprint-links-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
-{% endstylesheet %}
+
+  @media (max-width: 640px) {
+    .blueprint-links-grid {
+      grid-template-columns: 1fr;
+    }
+    .blueprint-bottom-bar {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>
+
+<!-- Live World Clock JavaScript -->
+<script>
+  (function() {
+    function updateBlueprintClock() {
+      const clockEl = document.getElementById('BlueprintClock-{{ section.id }}');
+      if (!clockEl) return;
+      
+      const now = new Date();
+      const options = {
+        timeZone: '{{ section.settings.timezone_iana | default: "America/Los_Angeles" }}',
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      };
+      
+      try {
+        const timeString = new Intl.DateTimeFormat('en-US', options).format(now);
+        const tzAbbr = '{{ section.settings.timezone_abbr | default: "PST" }}';
+        clockEl.textContent = `${timeString} ${tzAbbr}`;
+      } catch (e) {
+        clockEl.textContent = now.toTimeString().split(' ')[0] + ' UTC';
+      }
+    }
+
+    updateBlueprintClock();
+    setInterval(updateBlueprintClock, 1000);
+  })();
+</script>
 
 {% schema %}
 {
-  "name": "t:general.footer",
+  "name": "Footer",
   "settings": [
     {
-      "type": "link_list",
-      "id": "menu",
-      "label": "t:labels.menu"
+      "type": "header",
+      "content": "Newsletter Settings"
+    },
+    {
+      "type": "text",
+      "id": "newsletter_title",
+      "label": "Newsletter Title",
+      "default": "JOIN THE PRIVATE LIST"
+    },
+    {
+      "type": "textarea",
+      "id": "newsletter_subtext",
+      "label": "Newsletter Subtext",
+      "default": "Receive direct notification upon vault unlocks, archival drops, and private releases."
+    },
+    {
+      "type": "header",
+      "content": "Telemetry & World Clock"
+    },
+    {
+      "type": "text",
+      "id": "hq_location",
+      "label": "HQ Location Label",
+      "default": "LOS ANGELES, CA"
+    },
+    {
+      "type": "text",
+      "id": "timezone_iana",
+      "label": "Timezone (IANA Name)",
+      "default": "America/Los_Angeles",
+      "info": "e.g. America/Los_Angeles, Asia/Tokyo, Europe/London"
+    },
+    {
+      "type": "text",
+      "id": "timezone_abbr",
+      "label": "Timezone Abbreviation",
+      "default": "PST"
+    },
+    {
+      "type": "header",
+      "content": "Brand Info & Socials"
+    },
+    {
+      "type": "textarea",
+      "id": "brand_bio",
+      "label": "Brand Description",
+      "default": "Bespoke headwear engineered with heavyweight wools, structured buckram crowns, and precision craftsmanship."
+    },
+    {
+      "type": "text",
+      "id": "social_instagram",
+      "label": "Instagram URL"
+    },
+    {
+      "type": "text",
+      "id": "social_tiktok",
+      "label": "TikTok URL"
+    },
+    {
+      "type": "text",
+      "id": "social_x",
+      "label": "X (Twitter) URL"
+    },
+    {
+      "type": "text",
+      "id": "social_youtube",
+      "label": "YouTube URL"
+    },
+    {
+      "type": "header",
+      "content": "Payment Options"
     },
     {
       "type": "checkbox",
       "id": "show_payment_icons",
-      "label": "t:labels.show_payment_icons",
+      "label": "Show Payment Icons",
       "default": true
+    },
+    {
+      "type": "header",
+      "content": "Color Scheme"
+    },
+    {
+      "type": "color",
+      "id": "footer_bg",
+      "label": "Footer Background",
+      "default": "#0E0E0E"
+    },
+    {
+      "type": "color",
+      "id": "input_bg",
+      "label": "Input Box Fill",
+      "default": "#141414"
+    },
+    {
+      "type": "color",
+      "id": "grid_border",
+      "label": "Blueprint Grid Border",
+      "default": "#222222"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Primary Text",
+      "default": "#F5F5F5"
+    },
+    {
+      "type": "color",
+      "id": "subtext_color",
+      "label": "Secondary / Subtext",
+      "default": "#888888"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent Color (Gold)",
+      "default": "#D4AF37"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "menu",
+      "name": "Navigation Column",
+      "limit": 3,
+      "settings": [
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Column Heading Override",
+          "info": "Leave blank to use Shopify Menu name."
+        },
+        {
+          "type": "link_list",
+          "id": "menu",
+          "label": "Select Menu"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Footer",
+      "blocks": [
+        {
+          "type": "menu"
+        },
+        {
+          "type": "menu"
+        }
+      ]
     }
   ]
 }
