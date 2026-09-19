@@ -1,38 +1,13 @@
 {
-  "name": "Header",
+  "name": "Header group",
   "type": "header",
   "sections": {
-    "announcement_bar": {
-      "type": "announcement-bar",
-      "blocks": {
-        "announcement": {
-          "type": "announcement",
-          "settings": {
-            "text": "LIMITED RUN: THE FALL FITTED CAPS ARE NOW AVAILABLE."
-          }
-        }
-      },
-      "block_order": [
-        "announcement"
-      ],
-      "settings": {
-        "color_scheme": "background-1",
-        "show_line_separator": false
-      }
-    },
     "header": {
       "type": "header",
-      "settings": {
-        "logo_position": "top-center",
-        "menu_type_desktop": "dropdown",
-        "show_line_separator": true,
-        "enable_sticky_header": true,
-        "color_scheme": "background-1"
-      }
+      "settings": {}
     }
   },
   "order": [
-    "announcement_bar",
     "header"
   ]
 }

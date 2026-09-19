@@ -1,0 +1,13 @@
+<div style="background: var(--color-base-background-1, #0e0e0e); color: var(--color-base-accent-1, #d4af37); text-align: center; padding: 10px; font-family: var(--font-heading-family); letter-spacing: 1px; font-size: 12px; text-transform: uppercase;">
+  {{ section.settings.text | default: "ANNOUNCEMENT BAR" }}
+</div>
+
+{% schema %}
+{
+  "name": "Announcement Bar",
+  "settings": [
+    { "type": "text", "id": "text", "label": "Text" }
+  ],
+  "presets": [{"name": "Announcement Bar"}]
+}
+{% endschema %}

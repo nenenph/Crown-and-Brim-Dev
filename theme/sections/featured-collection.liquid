@@ -1,0 +1,285 @@
+<!-- Outer Section Container (Forces 100vw Full-Bleed Coverage) -->
+<section style="background-color: {{ section.settings.section_bg }}; width: 100vw; margin-left: calc(-50vw + 50%); margin-right: calc(-50vw + 50%); max-width: 100vw; padding: 90px 40px; box-sizing: border-box; border-top: 1px solid {{ section.settings.section_border }}; border-bottom: 1px solid {{ section.settings.section_border }};">
+  
+  <!-- Inner Max-Width Content Wrapper -->
+  <div style="max-width: 1400px; margin: 0 auto;">
+    
+    <!-- Section Header -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 48px;">
+      <div>
+        {% if section.settings.subheading != blank %}
+          <span style="color: {{ section.settings.accent_color }}; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; display: block; margin-bottom: 8px;">
+            {{ section.settings.subheading }}
+          </span>
+        {% endif %}
+        <h2 style="color: {{ section.settings.text_color }}; font-family: 'Oswald', sans-serif; font-size: clamp(2rem, 3vw, 2.75rem); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">
+          {{ section.settings.heading | default: "The Vault Collection" }}
+        </h2>
+      </div>
+
+      <a href="{{ section.settings.collection.url | default: '/collections/all' }}" style="color: {{ section.settings.text_color }}; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; text-decoration: none; border-bottom: 1px solid {{ section.settings.text_color }}; padding-bottom: 4px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.6'" onmouseout="this.style.opacity='1'">
+        View All Products &rarr;
+      </a>
+    </div>
+
+    <!-- Dynamic Grid -->
+    <div class="drop-grid-{{ section.id }}">
+      {% assign target_collection = section.settings.collection %}
+      
+      {% if target_collection != blank and target_collection.products_count > 0 %}
+        {% for product in target_collection.products limit: section.settings.grid_limit %}
+          <a href="{{ product.url }}" class="drop-card" style="background-color: {{ section.settings.card_bg }}; border: 1px solid {{ section.settings.card_border }}; text-decoration: none;">
+            
+            <!-- Image Wrapper (Aspect Ratio & Hover Swap) -->
+            <div class="drop-card-image-wrap">
+              {% if product.featured_media %}
+                <img src="{{ product.featured_media | image_url: width: 600 }}" alt="{{ product.title }}" class="primary-image" loading="lazy">
+                {% if product.media[1] %}
+                  <img src="{{ product.media[1] | image_url: width: 600 }}" alt="{{ product.title }} alternate view" class="secondary-image" loading="lazy">
+                {% endif %}
+              {% else %}
+                {{ 'product-1' | placeholder_svg_tag: 'placeholder-svg' }}
+              {% endif %}
+            </div>
+
+            <!-- Product Info -->
+            <div class="drop-card-info">
+              <h3 style="color: {{ section.settings.text_color }};">{{ product.title }}</h3>
+              <p style="color: {{ section.settings.price_color }};">{{ product.price | money }}</p>
+            </div>
+          </a>
+        {% endfor %}
+      {% else %}
+        <!-- Onboarding Placeholder Grid -->
+        {% for i in (1..section.settings.grid_limit) %}
+          <div class="drop-card" style="background-color: {{ section.settings.card_bg }}; border: 1px solid {{ section.settings.card_border }};">
+            <div class="drop-card-image-wrap" style="background-color: rgba(0,0,0,0.02);">
+              {% capture current %}{% cycle 1, 2, 3, 4, 5, 6 %}{% endcapture %}
+              {{ 'product-' | append: current | placeholder_svg_tag: 'placeholder-svg' }}
+            </div>
+            <div class="drop-card-info">
+              <h3 style="color: {{ section.settings.text_color }};">Crown Obsidian Fitted</h3>
+              <p style="color: {{ section.settings.price_color }};">$65.00</p>
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+
+  </div>
+</section>
+
+<!-- Dynamic Layout Stylesheet -->
+<style>
+  html, body {
+    overflow-x: hidden; /* Prevents horizontal scrollbars on edge-to-edge layouts */
+  }
+
+  .drop-grid-{{ section.id }} {
+    display: grid;
+    grid-template-columns: repeat({{ section.settings.columns_desktop }}, 1fr);
+    gap: {{ section.settings.grid_gap }}px;
+  }
+
+  .drop-card {
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+  }
+
+  .drop-card:hover {
+    border-color: {{ section.settings.accent_color }} !important;
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+  }
+
+  .drop-card-image-wrap {
+    position: relative;
+    width: 100%;
+    padding-top: 100%; /* Strict 1:1 square ratio */
+    overflow: hidden;
+  }
+
+  .primary-image, .secondary-image, .placeholder-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 0.4s ease;
+  }
+
+  .secondary-image {
+    opacity: 0;
+  }
+
+  .drop-card:hover .secondary-image {
+    opacity: 1;
+  }
+  .drop-card:hover .primary-image {
+    opacity: 0;
+  }
+
+  .placeholder-svg {
+    padding: 30px;
+    box-sizing: border-box;
+    filter: invert(0.1);
+    opacity: 0.2;
+  }
+
+  .drop-card-info {
+    padding: 20px;
+  }
+
+  .drop-card-info h3 {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 8px 0;
+  }
+
+  .drop-card-info p {
+    font-family: 'Oswald', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  @media (max-width: 768px) {
+    .drop-grid-{{ section.id }} {
+      grid-template-columns: repeat({{ section.settings.columns_mobile }}, 1fr);
+      gap: 12px;
+    }
+    .drop-card-info {
+      padding: 14px 10px;
+    }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Featured Collection",
+  "settings": [
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "CURATED SELECTION"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Section Heading",
+      "default": "The Vault Collection"
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "Select Collection to Feature"
+    },
+    {
+      "type": "header",
+      "content": "Grid Layout Controls"
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "min": 2,
+      "max": 6,
+      "step": 1,
+      "label": "Desktop Columns",
+      "default": 4
+    },
+    {
+      "type": "select",
+      "id": "columns_mobile",
+      "label": "Mobile Columns",
+      "options": [
+        {
+          "value": "1",
+          "label": "1 Column"
+        },
+        {
+          "value": "2",
+          "label": "2 Columns"
+        }
+      ],
+      "default": "2"
+    },
+    {
+      "type": "range",
+      "id": "grid_limit",
+      "min": 2,
+      "max": 24,
+      "step": 1,
+      "label": "Maximum Products to Display",
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "grid_gap",
+      "min": 8,
+      "max": 32,
+      "step": 4,
+      "unit": "px",
+      "label": "Grid Gap Spacing",
+      "default": 16
+    },
+    {
+      "type": "header",
+      "content": "Color Customization (Full-Bleed)"
+    },
+    {
+      "type": "color",
+      "id": "section_bg",
+      "label": "Section Outer Background (Full Width)",
+      "default": "#F5F5F5"
+    },
+    {
+      "type": "color",
+      "id": "section_border",
+      "label": "Section Top/Bottom Border Color",
+      "default": "#E5E5E5"
+    },
+    {
+      "type": "color",
+      "id": "card_bg",
+      "label": "Card Background",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "card_border",
+      "label": "Card Border Color",
+      "default": "#E5E5E5"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#0E0E0E"
+    },
+    {
+      "type": "color",
+      "id": "price_color",
+      "label": "Price Tag Color",
+      "default": "#D4AF37"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Hover Border Accent",
+      "default": "#D4AF37"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Featured Collection"
+    }
+  ]
+}
+{% endschema %}

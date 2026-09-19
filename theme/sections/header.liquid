@@ -1,76 +1,145 @@
-<header>
-  <h2 class="header__title">
-    {{ shop.name | link_to: routes.root_url }}
-  </h2>
+<header id="CrownHeader" style="background: transparent; border-bottom: none; padding: 22px 40px; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; box-sizing: border-box; transition: all 0.3s ease;">
+  <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto; position: relative;">
+    
+    <!-- Left: Mobile Menu Trigger & Minimal Desktop Nav -->
+    <div style="display: flex; align-items: center; gap: 20px;">
+      <!-- Mobile Hamburger Button -->
+      <button id="MobileMenuBtn" aria-label="Open Menu" style="background: none; border: none; color: #F5F5F5; cursor: pointer; display: none; padding: 0;" class="mobile-only-flex">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+      </button>
 
-  <div class="header__menu">
-    {% for link in section.settings.menu.links %}
-      {{ link.title | link_to: link.url }}
-    {% endfor %}
+      <!-- Desktop Minimal Nav -->
+      <nav style="display: flex; gap: 28px;" class="desktop-only-flex">
+        {% for link in section.settings.menu.links %}
+          <a href="{{ link.url }}" style="color: #CCCCCC; text-decoration: none; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; transition: color 0.2s;" onmouseover="this.style.color='#D4AF37'" onmouseout="this.style.color='#CCCCCC'">
+            {{ link.title }}
+          </a>
+        {% endfor %}
+        {% if section.settings.menu == blank %}
+          <a href="/" style="color: #CCCCCC; text-decoration: none; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em;">Shop</a>
+          <a href="/collections/all" style="color: #CCCCCC; text-decoration: none; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em;">Vault</a>
+        {% endif %}
+      </nav>
+    </div>
+
+    <!-- Center: Brand Logo -->
+    <div style="text-align: center; position: absolute; left: 50%; transform: translateX(-50%);">
+      <a href="{{ routes.root_url }}" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">
+        {% if section.settings.logo_image != blank %}
+          <img src="{{ section.settings.logo_image | image_url: width: 200 }}" alt="{{ shop.name }}" style="max-height: {{ section.settings.logo_height }}px; width: auto; display: block;">
+        {% else %}
+          <span style="color: #F5F5F5; font-family: 'Oswald', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase;">
+            {{ shop.name | default: "CROWN & BRIM CO." }}
+          </span>
+        {% endif %}
+      </a>
+    </div>
+
+    <!-- Right: Utility Icons -->
+    <div style="display: flex; align-items: center; gap: 20px;">
+      <a href="{{ routes.search_url }}" style="color: #F5F5F5; text-decoration: none; display: flex; align-items: center;" title="Search">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+      </a>
+      <a href="{{ routes.cart_url }}" style="color: #F5F5F5; text-decoration: none; display: flex; align-items: center; gap: 6px;" title="Cart">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+        <span style="font-family: 'Inter', sans-serif; font-size: 11px; background: #D4AF37; color: #0E0E0E; padding: 1px 5px; font-weight: 700; border-radius: 2px;">{{ cart.item_count }}</span>
+      </a>
+    </div>
+
   </div>
 
-  <div class="header__icons">
-    {% if shop.customer_accounts_enabled %}
-      <shopify-account menu="{{ section.settings.customer_account_menu }}">
-        {{ 'icon-account.svg' | inline_asset_content }}
-      </shopify-account>
-    {% endif %}
-
-    <a href="{{ routes.cart_url }}">
-      {% if cart.item_count > 0 %}
-        <sup>{{ cart.item_count }}</sup>
+  <!-- Mobile Slide-out Drawer -->
+  <div id="MobileDrawer" style="position: fixed; top: 0; left: -100%; width: 80%; max-width: 320px; height: 100vh; background: #0E0E0E; z-index: 10000; transition: left 0.3s ease; padding: 40px 24px; box-sizing: border-box; border-right: 1px solid #222;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+      <span style="color: #D4AF37; font-family: 'Oswald', sans-serif; font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase;">Menu</span>
+      <button id="CloseDrawerBtn" style="background: none; border: none; color: #F5F5F5; cursor: pointer; padding: 0;">
+        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 24px;">
+      {% for link in section.settings.menu.links %}
+        <a href="{{ link.url }}" style="color: #F5F5F5; text-decoration: none; font-family: 'Inter', sans-serif; font-size: 16px; text-transform: uppercase; letter-spacing: 0.05em;">
+          {{ link.title }}
+        </a>
+      {% endfor %}
+      {% if section.settings.menu == blank %}
+        <a href="/" style="color: #F5F5F5; text-decoration: none; font-family: 'Inter', sans-serif; font-size: 16px; text-transform: uppercase;">Shop</a>
+        <a href="/collections/all" style="color: #F5F5F5; text-decoration: none; font-family: 'Inter', sans-serif; font-size: 16px; text-transform: uppercase;">Vault</a>
       {% endif %}
-
-      {{ 'icon-cart.svg' | inline_asset_content }}
-    </a>
+    </nav>
   </div>
+  <div id="DrawerOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 9999; display: none; opacity: 0; transition: opacity 0.3s ease;"></div>
 </header>
 
-{% stylesheet %}
-  header {
-    height: 5rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+<style>
+  @media (max-width: 768px) {
+    .desktop-only-flex { display: none !important; }
+    .mobile-only-flex { display: flex !important; }
   }
-  header a {
-    position: relative;
-    text-decoration: none;
-    color: var(--color-foreground);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+</style>
+
+<script>
+  window.addEventListener('scroll', function() {
+    const header = document.getElementById('CrownHeader');
+    if (window.scrollY > 20) {
+      header.style.background = 'rgba(14, 14, 14, 0.85)';
+      header.style.backdropFilter = 'blur(12px)';
+      header.style.webkitBackdropFilter = 'blur(12px)';
+      header.style.borderBottom = '1px solid rgba(212, 175, 55, 0.2)';
+    } else {
+      header.style.background = 'transparent';
+      header.style.backdropFilter = 'none';
+      header.style.webkitBackdropFilter = 'none';
+      header.style.borderBottom = 'none';
+    }
+  });
+
+  const menuBtn = document.getElementById('MobileMenuBtn');
+  const closeBtn = document.getElementById('CloseDrawerBtn');
+  const drawer = document.getElementById('MobileDrawer');
+  const overlay = document.getElementById('DrawerOverlay');
+
+  function openMenu() {
+    drawer.style.left = '0';
+    overlay.style.display = 'block';
+    setTimeout(() => { overlay.style.opacity = '1'; }, 10);
   }
-  header a sup {
-    position: absolute;
-    left: 100%;
-    overflow: hidden;
-    max-width: var(--page-margin);
+
+  function closeMenu() {
+    drawer.style.left = '-100%';
+    overlay.style.opacity = '0';
+    setTimeout(() => { overlay.style.display = 'none'; }, 300);
   }
-  header svg {
-    width: 2rem;
-  }
-  header .header__menu,
-  header .header__icons {
-    display: flex;
-    gap: 1rem;
-  }
-{% endstylesheet %}
+
+  if (menuBtn) menuBtn.addEventListener('click', openMenu);
+  if (closeBtn) closeBtn.addEventListener('click', closeMenu);
+  if (overlay) overlay.addEventListener('click', closeMenu);
+</script>
 
 {% schema %}
 {
-  "name": "t:general.header",
+  "name": "Header",
   "settings": [
     {
       "type": "link_list",
       "id": "menu",
-      "label": "t:labels.menu"
+      "label": "Navigation Menu",
+      "default": "main-menu"
     },
     {
-      "type": "link_list",
-      "id": "customer_account_menu",
-      "label": "t:labels.customer_account_menu",
-      "default": "customer-account-main-menu"
+      "type": "image_picker",
+      "id": "logo_image",
+      "label": "Custom Logo Image"
+    },
+    {
+      "type": "range",
+      "id": "logo_height",
+      "min": 20,
+      "max": 80,
+      "step": 2,
+      "unit": "px",
+      "label": "Logo Height",
+      "default": 32
     }
   ]
 }

@@ -1,20 +1,64 @@
-/*
- * ------------------------------------------------------------
- * IMPORTANT: The contents of this file are auto-generated.
- *
- * This file may be updated by the Shopify admin theme editor
- * or related systems. Please exercise caution as any changes
- * made to this file may be overwritten.
- * ------------------------------------------------------------
- */
 {
   "sections": {
-    "main": {
-      "type": "hello-world",
-      "settings": {}
+    "hero": {
+      "type": "hero-video",
+      "settings": {
+        "heading": "THE VAULT IS OPEN",
+        "subtext": "Permanent collection and limited-edition headwear engineered for precision and prestige."
+      }
+    },
+    "featured_collection": {
+      "type": "featured-collection",
+      "settings": {
+        "title": "THE STARTING LINEUP",
+        "heading_size": "h2",
+        "description": "",
+        "show_view_all": true,
+        "columns_desktop": 4,
+        "color_scheme": "scheme-2",
+        "image_ratio": "square",
+        "show_secondary_image": true,
+        "swipe_on_mobile": true
+      }
+    },
+    "brand_narrative": {
+      "type": "rich-text",
+      "blocks": {
+        "heading": {
+          "type": "heading",
+          "settings": {
+            "heading": "UNCOMPROMISING ARCHITECTURE",
+            "heading_size": "h2"
+          }
+        },
+        "text": {
+          "type": "text",
+          "settings": {
+            "text": "<p>No mass production. We source heavyweight melton wool and structured buckram to ensure every cap holds its shape from day one to year ten.<\/p>"
+          }
+        },
+        "button": {
+          "type": "button",
+          "settings": {
+            "button_label": "LEARN ABOUT OUR FIT",
+            "button_link": "shopify:\/\/collections\/all"
+          }
+        }
+      },
+      "block_order": [
+        "heading",
+        "text",
+        "button"
+      ],
+      "settings": {
+        "color_scheme": "scheme-1",
+        "desktop_content_position": "center"
+      }
     }
   },
   "order": [
-    "main"
+    "hero",
+    "featured_collection",
+    "brand_narrative"
   ]
 }

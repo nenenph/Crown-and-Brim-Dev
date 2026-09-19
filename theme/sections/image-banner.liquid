@@ -1,0 +1,26 @@
+<div style="background: var(--color-base-background-2, #1a1a1a); padding: 120px 20px; text-align: center; border-bottom: 2px solid var(--color-base-accent-1, #d4af37);">
+  {% for block in section.blocks %}
+    {% case block.type %}
+      {% when 'heading' %}
+        <h1 style="color: var(--color-base-text, #f5f5f5); font-size: 4rem; margin: 0; font-family: var(--font-heading-family);">{{ block.settings.heading }}</h1>
+      {% when 'text' %}
+        <p style="color: #ccc; max-width: 600px; margin: 20px auto; font-family: var(--font-body-family);">{{ block.settings.text }}</p>
+      {% when 'buttons' %}
+        <a href="{{ block.settings.button_link_1 }}" style="display: inline-block; background: var(--color-base-accent-1, #d4af37); color: var(--color-base-solid-button-labels, #0e0e0e); padding: 15px 30px; text-decoration: none; font-weight: bold; text-transform: uppercase; margin-top: 20px;">
+          {{ block.settings.button_label_1 }}
+        </a>
+    {% endcase %}
+  {% endfor %}
+</div>
+
+{% schema %}
+{
+  "name": "Image Banner",
+  "blocks": [
+    { "type": "heading", "name": "Heading", "settings": [{ "type": "text", "id": "heading", "label": "Heading" }] },
+    { "type": "text", "name": "Text", "settings": [{ "type": "text", "id": "text", "label": "Text" }] },
+    { "type": "buttons", "name": "Buttons", "settings": [{ "type": "text", "id": "button_label_1", "label": "Button Label" }, { "type": "url", "id": "button_link_1", "label": "Button Link" }] }
+  ],
+  "presets": [{"name": "Image Banner"}]
+}
+{% endschema %}
