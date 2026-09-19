@@ -24,6 +24,9 @@
     {% render 'meta-tags' %}
 
     {{ content_for_header }}
+
+    <!-- Crown & Brim Co. Custom Overrides -->
+    {{ 'theme-overrides.css' | asset_url | stylesheet_tag }}
   </head>
 
   <body>

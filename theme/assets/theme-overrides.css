@@ -1,0 +1,40 @@
+/* ==========================================================================
+   CROWN & BRIM CO. - MIDNIGHT GOLD THEME OVERRIDES
+   ========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Oswald:wght@500;700&display=swap');
+
+:root, body {
+  /* Typography Overrides */
+  --font-body-family: 'Inter', sans-serif;
+  --font-heading-family: 'Oswald', sans-serif;
+  --font-heading-weight: 700;
+  
+  /* Color Palette Overrides (Dawn-compatible RGB mapping) */
+  --color-base-text: 245, 245, 245;          /* #F5F5F5 Crisp Off-White */
+  --color-base-background-1: 14, 14, 14;     /* #0E0E0E Deep Obsidian */
+  --color-base-background-2: 26, 26, 26;     
+  --color-base-solid-button-labels: 14, 14, 14; 
+  --color-base-outline-button-labels: 212, 175, 55;
+  --color-base-accent-1: 212, 175, 55;       /* #D4AF37 Metallic Gold */
+
+  /* Structural Overrides (Sharp Premium Edges) */
+  --buttons-radius: 0px;
+  --inputs-radius: 0px;
+  --badges-radius: 0px;
+  --cards-radius: 0px;
+  --variant-pills-radius: 0px;
+  --drawer-corner-radius: 0px;
+}
+
+/* Base Element Styling Fallbacks */
+body {
+  background-color: #0E0E0E !important;
+  color: #F5F5F5 !important;
+}
+
+/* Force uppercase and spacing for luxury aesthetic on all headings */
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+  font-family: 'Oswald', sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
