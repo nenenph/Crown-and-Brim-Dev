@@ -14,8 +14,23 @@
     "footer": {
       "type": "footer",
       "settings": {
-        "menu": "",
-        "show_payment_icons": true
+        "newsletter_title": "JOIN THE PRIVATE LIST",
+        "newsletter_subtext": "Receive direct notification upon vault unlocks, archival drops, and private releases.",
+        "hq_location": "Washington, Surigao, Surigao del Norte, PH",
+        "timezone_iana": "Asia/Manila",
+        "timezone_abbr": "PHT",
+        "brand_bio": "Bespoke headwear engineered with heavyweight wools, structured buckram crowns, and precision craftsmanship.",
+        "social_instagram": "",
+        "social_tiktok": "",
+        "social_x": "",
+        "social_youtube": "",
+        "show_payment_icons": true,
+        "footer_bg": "#0e0e0e",
+        "input_bg": "#141414",
+        "grid_border": "#222222",
+        "text_color": "#f5f5f5",
+        "subtext_color": "#888888",
+        "accent_color": "#d4af37"
       }
     }
   },
