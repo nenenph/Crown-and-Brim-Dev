@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Shopify CLI generated files
+.shopify/
+
+# OS / Editor files
+.DS_Store
+.vscode/
+*.log
