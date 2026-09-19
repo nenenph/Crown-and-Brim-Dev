@@ -1,0 +1,1 @@
+/home/Em/Documents/Programming/Shopify/shopify-takehome-task/theme/AGENTS.md
