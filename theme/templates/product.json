@@ -1,17 +1,13 @@
-/*
- * ------------------------------------------------------------
- * IMPORTANT: The contents of this file are auto-generated.
- *
- * This file may be updated by the Shopify admin theme editor
- * or related systems. Please exercise caution as any changes
- * made to this file may be overwritten.
- * ------------------------------------------------------------
- */
 {
   "sections": {
     "main": {
-      "type": "product",
-      "settings": {}
+      "type": "main-product",
+      "settings": {
+        "bg_color": "#0E0E0E",
+        "text_color": "#F5F5F5",
+        "accent_color": "#D4AF37",
+        "grid_border": "#222222"
+      }
     }
   },
   "order": [
