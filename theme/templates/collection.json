@@ -1,20 +1,28 @@
-/*
- * ------------------------------------------------------------
- * IMPORTANT: The contents of this file are auto-generated.
- *
- * This file may be updated by the Shopify admin theme editor
- * or related systems. Please exercise caution as any changes
- * made to this file may be overwritten.
- * ------------------------------------------------------------
- */
 {
   "sections": {
-    "main": {
-      "type": "collection",
-      "settings": {}
+    "banner": {
+      "type": "main-collection-banner",
+      "settings": {
+        "bg_color": "#0E0E0E",
+        "text_color": "#F5F5F5",
+        "subtext_color": "#888888",
+        "accent_color": "#D4AF37",
+        "grid_border": "#222222"
+      }
+    },
+    "product_grid": {
+      "type": "main-collection-product-grid",
+      "settings": {
+        "bg_color": "#0E0E0E",
+        "card_bg": "#0E0E0E",
+        "grid_border": "#222222",
+        "text_color": "#F5F5F5",
+        "accent_color": "#D4AF37"
+      }
     }
   },
   "order": [
-    "main"
+    "banner",
+    "product_grid"
   ]
 }
