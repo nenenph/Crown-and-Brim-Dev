@@ -1,0 +1,148 @@
+<!-- snippets/cart-drawer-js.liquid -->
+<script>
+  let cartCache = null;
+
+  // Prefetch cart data on mouseover for zero-latency response
+  document.addEventListener('mouseover', function(e) {
+    const cartTrigger = e.target.closest('#cart-icon-bubble, a[href="/cart"], .header__icon--cart, [href*="/cart"]');
+    if (cartTrigger && !cartCache) {
+      fetch('/cart.js')
+        .then(res => res.json())
+        .then(cart => { cartCache = cart; })
+        .catch(err => {});
+    }
+  });
+
+  function openCartDrawer() {
+    const drawer = document.getElementById('CartDrawer');
+    if (!drawer) return;
+
+    // 1. OPTIMISTIC UI: Slide open instantly
+    drawer.style.display = 'flex';
+    setTimeout(() => {
+      drawer.classList.add('open');
+    }, 10);
+
+    // 2. Render cached state instantly if available
+    if (cartCache) {
+      renderCartDrawer(cartCache);
+    }
+
+    // 3. Fetch fresh cart state in the background
+    fetch('/cart.js')
+      .then(res => res.json())
+      .then(cart => {
+        cartCache = cart;
+        renderCartDrawer(cart);
+      })
+      .catch(err => console.error('Cart fetch error:', err));
+  }
+
+  function closeCartDrawer() {
+    const drawer = document.getElementById('CartDrawer');
+    if (!drawer) return;
+    drawer.classList.remove('open');
+    setTimeout(() => {
+      drawer.style.display = 'none';
+    }, 300);
+  }
+
+  function renderCartDrawer(cart) {
+    cartCache = cart;
+    
+    const countHeader = document.getElementById('CartItemCountHeader');
+    if (countHeader) countHeader.innerText = cart.item_count;
+    
+    const badges = document.querySelectorAll('#HeaderCartBadge, #cart-icon-bubble .cart-count-bubble span, .cart-count');
+    badges.forEach(badge => {
+      if (badge) badge.innerText = cart.item_count;
+    });
+
+    const subtotalEl = document.getElementById('CartDrawerSubtotal');
+    if (subtotalEl) subtotalEl.innerText = formatMoney(cart.total_price);
+
+    const body = document.getElementById('CartDrawerBody');
+    if (!body) return;
+
+    if (cart.items.length === 0) {
+      body.innerHTML = '<div class="drawer-empty-state"><p>[ VAULT IS CURRENTLY EMPTY ]</p></div>';
+      return;
+    }
+
+    let html = '';
+    cart.items.forEach((item, index) => {
+      const cleanSize = item.variant_options && item.variant_options[0] !== 'Default Title' 
+        ? item.variant_options[0].replace(/-1-8/g, ' 1/8').replace(/-1-4/g, ' 1/4').replace(/-3-8/g, ' 3/8').replace(/-1-2/g, ' 1/2').replace(/-5-8/g, ' 5/8').replace(/-3-4/g, ' 3/4') 
+        : '';
+
+      html += `
+        <div class="drawer-item-row">
+          <div class="drawer-item-img">
+            <img src="${item.image ? item.image : ''}" alt="${item.product_title}">
+          </div>
+          <div class="drawer-item-details">
+            <a href="${item.url}" class="drawer-item-title">${item.product_title}</a>
+            ${cleanSize ? `<span class="drawer-item-size">SIZE: ${cleanSize}</span>` : ''}
+            <span class="drawer-item-price">${formatMoney(item.final_line_price)}</span>
+            
+            <div class="drawer-item-controls">
+              <div class="quantity-stepper">
+                <button type="button" class="qty-btn" onclick="updateCartItem(${index + 1}, ${item.quantity - 1})">-</button>
+                <input type="text" class="qty-input" value="${item.quantity}" readonly>
+                <button type="button" class="qty-btn" onclick="updateCartItem(${index + 1}, ${item.quantity + 1})">+</button>
+              </div>
+              <button type="button" class="drawer-item-remove" onclick="updateCartItem(${index + 1}, 0)">[ REMOVE ]</button>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    body.innerHTML = html;
+  }
+
+  function updateCartItem(lineIndex, newQty) {
+    fetch('/cart/change.js', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ line: lineIndex, quantity: newQty })
+    })
+    .then(res => res.json())
+    .then(cart => {
+      renderCartDrawer(cart);
+    });
+  }
+
+  function formatMoney(cents) {
+    return '$' + (cents / 100).toFixed(2) + ' USD';
+  }
+
+  // Intercept header cart icon clicks globally
+  document.addEventListener('click', function(e) {
+    const cartTrigger = e.target.closest('#cart-icon-bubble, a[href="/cart"], .header__icon--cart, [href*="/cart"]');
+    if (cartTrigger) {
+      e.preventDefault();
+      openCartDrawer();
+    }
+  });
+
+  // Intercept Add to Cart form submissions across PDP and Quick Add
+  document.addEventListener('submit', function(e) {
+    if (e.target && e.target.matches('form[action*="/cart/add"]')) {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+
+      fetch('/cart/add.js', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then((cart) => {
+        cartCache = cart;
+        openCartDrawer();
+      })
+      .catch((err) => {
+        console.error('Error adding to cart:', err);
+      });
+    }
+  });
+</script>

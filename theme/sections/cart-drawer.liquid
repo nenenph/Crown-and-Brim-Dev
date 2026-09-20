@@ -1,0 +1,298 @@
+<!-- sections/cart-drawer.liquid -->
+<div id="CartDrawer" class="cart-drawer-overlay" style="display: none;">
+  <div class="cart-drawer-backdrop" onclick="closeCartDrawer()"></div>
+  <div class="cart-drawer-panel" style="background-color: {{ section.settings.bg_color }}; color: {{ section.settings.text_color }}; border-color: {{ section.settings.grid_border }};">
+    
+    <!-- Drawer Header -->
+    <div class="drawer-header" style="border-color: {{ section.settings.grid_border }};">
+      <span class="drawer-title" style="color: {{ section.settings.accent_color }};">
+        [ VAULT INVENTORY // <span id="CartItemCountHeader">0</span> ITEMS ]
+      </span>
+      <button type="button" class="drawer-close-btn" onclick="closeCartDrawer()" aria-label="Close cart">
+        [ CLOSE × ]
+      </button>
+    </div>
+
+    <!-- Drawer Body / Item List -->
+    <div class="drawer-body" id="CartDrawerBody">
+      <!-- Dynamically populated via AJAX -->
+      <div class="drawer-empty-state">
+        <p>[ VAULT IS CURRENTLY EMPTY ]</p>
+      </div>
+    </div>
+
+    <!-- Drawer Footer / Checkout -->
+    <div class="drawer-footer" style="border-color: {{ section.settings.grid_border }};">
+      <div class="drawer-subtotal-row">
+        <span class="subtotal-label">SUBTOTAL:</span>
+        <span class="subtotal-price" id="CartDrawerSubtotal" style="color: {{ section.settings.accent_color }};">$0.00 USD</span>
+      </div>
+      <p class="drawer-taxes-note">SHIPPING & TAXES CALCULATED AT CHECKOUT.</p>
+      
+      <div class="drawer-actions">
+        <form action="{{ routes.cart_url }}" method="post" novalidate>
+          <button type="submit" name="checkout" class="drawer-checkout-btn" style="background: {{ section.settings.accent_color }}; color: {{ section.settings.bg_color }};">
+            [ PROCEED TO SECURE CHECKOUT ]
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+  .cart-drawer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 99999;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .cart-drawer-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+  }
+  .cart-drawer-panel {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    height: 100%;
+    background: #0E0E0E;
+    border-left: 1px solid #222222;
+    display: flex;
+    flex-direction: column;
+    z-index: 2;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .cart-drawer-overlay.open .cart-drawer-panel {
+    transform: translateX(0);
+  }
+
+  /* Header */
+  .drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid #222222;
+  }
+  .drawer-title {
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+  }
+  .drawer-close-btn {
+    background: none;
+    border: none;
+    color: #F5F5F5;
+    font-family: monospace;
+    font-size: 12px;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+    transition: color 0.2s;
+  }
+  .drawer-close-btn:hover {
+    color: {{ section.settings.accent_color }};
+  }
+
+  /* Body */
+  .drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .drawer-empty-state {
+    text-align: center;
+    padding: 60px 0;
+    font-family: monospace;
+    font-size: 13px;
+    color: #666;
+    letter-spacing: 0.1em;
+  }
+
+  /* Item Row */
+  .drawer-item-row {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #1a1a1a;
+    align-items: start;
+  }
+  .drawer-item-img {
+    background: #141414;
+    border: 1px solid #222;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+  }
+  .drawer-item-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .drawer-item-details {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .drawer-item-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 15px;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: #F5F5F5;
+    line-height: 1.2;
+  }
+  .drawer-item-title:hover {
+    color: {{ section.settings.accent_color }};
+  }
+  .drawer-item-size, .drawer-item-price {
+    font-family: monospace;
+    font-size: 12px;
+    color: #888;
+  }
+  .drawer-item-price {
+    color: {{ section.settings.accent_color }};
+    font-weight: 700;
+  }
+
+  /* Quantity Stepper & Remove */
+  .drawer-item-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .quantity-stepper {
+    display: flex;
+    border: 1px solid #222;
+    background: #141414;
+  }
+  .qty-btn {
+    background: none;
+    border: none;
+    color: #F5F5F5;
+    font-family: monospace;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+  }
+  .qty-btn:hover {
+    color: {{ section.settings.accent_color }};
+  }
+  .qty-input {
+    background: none;
+    border: none;
+    color: #F5F5F5;
+    font-family: monospace;
+    width: 32px;
+    text-align: center;
+    font-size: 12px;
+  }
+  .drawer-item-remove {
+    background: none;
+    border: none;
+    font-family: monospace;
+    font-size: 11px;
+    color: #666;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: color 0.2s;
+  }
+  .drawer-item-remove:hover {
+    color: #ff4444;
+  }
+
+  /* Footer */
+  .drawer-footer {
+    padding: 24px;
+    border-top: 1px solid #222222;
+    background: #0E0E0E;
+  }
+  .drawer-subtotal-row {
+    display: flex;
+    justify-content: space-between;
+    font-family: monospace;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .subtotal-label {
+    color: #888;
+  }
+  .drawer-taxes-note {
+    font-family: monospace;
+    font-size: 10px;
+    color: #555;
+    margin-bottom: 16px;
+    letter-spacing: 0.05em;
+  }
+  .drawer-checkout-btn {
+    width: 100%;
+    border: none;
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 16px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    text-align: center;
+  }
+  .drawer-checkout-btn:hover {
+    opacity: 0.9;
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Terminal Cart Drawer",
+  "settings": [
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Background",
+      "default": "#0E0E0E"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#F5F5F5"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Gold Accent",
+      "default": "#D4AF37"
+    },
+    {
+      "type": "color",
+      "id": "grid_border",
+      "label": "Grid Border",
+      "default": "#222222"
+    }
+  ]
+}
+{% endschema %}

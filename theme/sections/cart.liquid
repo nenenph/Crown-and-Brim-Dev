@@ -1,37 +1,390 @@
-{% comment %}
-  This section is used in the cart template to render /cart page with an
-  overview of the items in customer's cart.
+<!-- sections/cart.liquid -->
+<div class="cart-page-architecture" style="background-color: {{ section.settings.bg_color }}; color: {{ section.settings.text_color }};">
+  <div class="cart-container">
+    
+    <div class="cart-page-header">
+      <span class="blueprint-tag" style="color: {{ section.settings.accent_color }};">
+        [ SYSTEM OVERVIEW // SECURE VAULT CART ]
+      </span>
+      <h1 class="cart-page-title">CART ARCHIVE</h1>
+    </div>
 
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/cart
-{% endcomment %}
+    {%- if cart.item_count == 0 -%}
+      <div class="cart-empty-vault">
+        <p>[ VAULT INVENTORY IS CURRENTLY EMPTY ]</p>
+        <a href="{{ routes.all_products_collection_url }}" class="return-shop-btn">
+          [ RETURN TO ARCHIVE COLLECTION ]
+        </a>
+      </div>
+    {%- else -%}
+      <form action="{{ routes.cart_url }}" method="post" novalidate class="cart-form-grid">
+        
+        <!-- Cart Items List -->
+        <div class="cart-items-table">
+          <div class="table-header-row" style="border-color: {{ section.settings.grid_border }};">
+            <span>ITEM SPEC</span>
+            <span>QTY</span>
+            <span>TOTAL</span>
+          </div>
 
-<h1>{{ 'cart.title' | t }}</h1>
+          {%- for item in cart.items -%}
+            {%- assign clean_size = '' -%}
+            {%- if item.variant_options and item.variant_options[0] != 'Default Title' -%}
+              {%- assign clean_size = item.variant_options[0] 
+                | replace: '-1-8', ' 1/8' 
+                | replace: '-1-4', ' 1/4' 
+                | replace: '-3-8', ' 3/8' 
+                | replace: '-1-2', ' 1/2' 
+                | replace: '-5-8', ' 5/8' 
+                | replace: '-3-4', ' 3/4' -%}
+            {%- endif -%}
 
-<form action="{{ routes.cart_url }}" method="post">
-  <table>
-    {% for item in cart.items %}
-      <tr>
-        <td>
-          {% render 'image', image: item.image, url: item.url %}
-        </td>
-        <td>
-          <p>{{ item.product.title }}</p>
-          {{ 'cart.remove' | t | link_to: item.url_to_remove }}
-        </td>
-        <td>
-          <input type="text" name="updates[]" value="{{ item.quantity }}">
-          <input type="submit" value="{{ 'cart.update' | t }}">
-        </td>
-      </tr>
-    {% endfor %}
-  </table>
+            <div class="cart-item-row" style="border-color: {{ section.settings.grid_border }};">
+              <div class="item-info-col">
+                <div class="item-img-box" style="border-color: {{ section.settings.grid_border }};">
+                  {%- if item.image -%}
+                    <img src="{{ item.image | img_url: '400x' }}" alt="{{ item.product.title | escape }}">
+                  {%- endif -%}
+                </div>
+                <div class="item-meta-details">
+                  <a href="{{ item.url }}" class="item-title-link">{{ item.product.title }}</a>
+                  {%- if clean_size != blank -%}
+                    <span class="item-size-tag">SIZE: {{ clean_size }}</span>
+                  {%- endif -%}
+                  <span class="item-unit-price">{{ item.original_price | money }} USD</span>
+                  <a href="{{ item.url_to_remove }}" class="item-remove-link">[ REMOVE ]</a>
+                </div>
+              </div>
 
-  <input type="submit" name="checkout" value="{{ 'cart.checkout' | t }}">
-</form>
+              <div class="item-qty-col">
+                <div class="quantity-stepper" style="border-color: {{ section.settings.grid_border }};">
+                  <a href="{{ routes.cart_change_url }}?line={{ forloop.index }}&quantity={{ item.quantity | minus: 1 }}" class="qty-btn">-</a>
+                  <input type="text" name="updates[]" value="{{ item.quantity }}" class="qty-input" readonly>
+                  <a href="{{ routes.cart_change_url }}?line={{ forloop.index }}&quantity={{ item.quantity | plus: 1 }}" class="qty-btn">+</a>
+                </div>
+              </div>
+
+              <div class="item-total-col" style="color: {{ section.settings.accent_color }};">
+                {{ item.final_line_price | money }} USD
+              </div>
+            </div>
+          {%- endfor -%}
+        </div>
+
+        <!-- Cart Summary / Checkout Sidebar -->
+        <div class="cart-summary-sidebar" style="border-color: {{ section.settings.grid_border }}; background: #121212;">
+          <div class="summary-header" style="border-color: {{ section.settings.grid_border }};">
+            <span>[ ORDER SUMMARY ]</span>
+          </div>
+
+          <div class="summary-body">
+            <div class="summary-row">
+              <span class="label">SUBTOTAL:</span>
+              <span class="value" style="color: {{ section.settings.accent_color }};">{{ cart.total_price | money }} USD</span>
+            </div>
+            <p class="summary-note">SHIPPING, DUTIES, AND TAXES CALCULATED AT SECURE CHECKOUT.</p>
+
+            <div class="summary-actions">
+              <button type="submit" name="checkout" class="checkout-btn" style="background: {{ section.settings.accent_color }}; color: #0E0E0E;">
+                [ PROCEED TO SECURE CHECKOUT ]
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </form>
+    {%- endif -%}
+
+  </div>
+</div>
+
+<style>
+  .cart-page-architecture {
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
+    max-width: 100vw;
+    box-sizing: border-box;
+    padding: 80px 40px;
+    min-height: 80vh;
+  }
+  .cart-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+  .cart-page-header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-bottom: 1px solid {{ section.settings.grid_border }};
+    padding-bottom: 24px;
+  }
+  .blueprint-tag {
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+  }
+  .cart-page-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: clamp(2rem, 3vw, 3.5rem);
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 0;
+    line-height: 1.1;
+  }
+
+  /* Empty Vault */
+  .cart-empty-vault {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 100px 0;
+    font-family: monospace;
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    color: #888;
+  }
+  .return-shop-btn {
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    background: {{ section.settings.accent_color }};
+    color: #0E0E0E;
+    padding: 16px 32px;
+    text-decoration: none;
+    font-weight: 700;
+  }
+
+  /* Cart Form Grid */
+  .cart-form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+
+  /* Table */
+  .cart-items-table {
+    display: flex;
+    flex-direction: column;
+  }
+  .table-header-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    padding-bottom: 16px;
+    border-bottom: 1px solid {{ section.settings.grid_border }};
+    font-family: monospace;
+    font-size: 11px;
+    color: #888;
+    letter-spacing: 0.1em;
+  }
+  .cart-item-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    padding: 24px 0;
+    border-bottom: 1px solid {{ section.settings.grid_border }};
+    align-items: center;
+  }
+  .item-info-col {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+  .item-img-box {
+    width: 90px;
+    height: 90px;
+    background: #141414;
+    border: 1px solid {{ section.settings.grid_border }};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    flex-shrink: 0;
+  }
+  .item-img-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .item-meta-details {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .item-title-link {
+    font-family: 'Oswald', sans-serif;
+    font-size: 16px;
+    text-transform: uppercase;
+    color: {{ section.settings.text_color }};
+    text-decoration: none;
+    line-height: 1.2;
+  }
+  .item-title-link:hover {
+    color: {{ section.settings.accent_color }};
+  }
+  .item-size-tag, .item-unit-price {
+    font-family: monospace;
+    font-size: 12px;
+    color: #888;
+  }
+  .item-remove-link {
+    font-family: monospace;
+    font-size: 11px;
+    color: #666;
+    text-decoration: none;
+    transition: color 0.2s;
+    margin-top: 4px;
+  }
+  .item-remove-link:hover {
+    color: #ff4444;
+  }
+
+  /* Quantity */
+  .item-qty-col {
+    display: flex;
+    align-items: center;
+  }
+  .quantity-stepper {
+    display: flex;
+    border: 1px solid {{ section.settings.grid_border }};
+    background: #141414;
+  }
+  .qty-btn {
+    background: none;
+    border: none;
+    color: {{ section.settings.text_color }};
+    font-family: monospace;
+    width: 32px;
+    height: 32px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+  .qty-btn:hover {
+    color: {{ section.settings.accent_color }};
+  }
+  .qty-input {
+    background: none;
+    border: none;
+    color: {{ section.settings.text_color }};
+    font-family: monospace;
+    width: 36px;
+    text-align: center;
+    font-size: 13px;
+  }
+
+  .item-total-col {
+    font-family: monospace;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  /* Sidebar */
+  .cart-summary-sidebar {
+    border: 1px solid {{ section.settings.grid_border }};
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: sticky;
+    top: 40px;
+  }
+  .summary-header {
+    border-bottom: 1px solid {{ section.settings.grid_border }};
+    padding-bottom: 16px;
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: {{ section.settings.accent_color }};
+  }
+  .summary-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    font-family: monospace;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .summary-note {
+    font-family: monospace;
+    font-size: 10px;
+    color: #666;
+    letter-spacing: 0.05em;
+    line-height: 1.4;
+  }
+  .summary-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .checkout-btn {
+    border: none;
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 16px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    text-align: center;
+  }
+  .checkout-btn:hover {
+    opacity: 0.9;
+  }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .cart-form-grid {
+      grid-template-columns: 1fr;
+    }
+    .table-header-row, .cart-item-row {
+      grid-template-columns: 2fr 1fr 1fr;
+    }
+  }
+</style>
 
 {% schema %}
 {
-  "name": "t:general.cart",
-  "settings": []
+  "name": "Cart Page Architecture",
+  "settings": [
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Background",
+      "default": "#0E0E0E"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#F5F5F5"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Gold Accent",
+      "default": "#D4AF37"
+    },
+    {
+      "type": "color",
+      "id": "grid_border",
+      "label": "Grid Border",
+      "default": "#222222"
+    }
+  ]
 }
 {% endschema %}

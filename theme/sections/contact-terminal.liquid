@@ -1,0 +1,298 @@
+<!-- sections/contact-terminal.liquid -->
+<div class="contact-terminal-architecture" style="background-color: {{ section.settings.bg_color }}; color: {{ section.settings.text_color }};">
+  <div class="contact-container">
+    
+    <div class="contact-page-header">
+      <span class="blueprint-tag" style="color: {{ section.settings.accent_color }};">
+        [ SECURE TRANSMISSION // VAULT DISPATCH ]
+      </span>
+      <h1 class="contact-page-title">COMMUNICATIONS TERMINAL</h1>
+    </div>
+
+    <div class="contact-grid">
+      <!-- Left Column: Telemetry & Metadata -->
+      <div class="contact-telemetry-box" style="border-color: {{ section.settings.grid_border }}; background: #121212;">
+        <div class="telemetry-header" style="border-color: {{ section.settings.grid_border }}; color: {{ section.settings.accent_color }};">
+          <span>[ TELEMETRY & CHANNELS ]</span>
+        </div>
+        <div class="telemetry-body">
+          <div class="telemetry-item">
+            <span class="t-label">DISPATCH FREQUENCY:</span>
+            <span class="t-value">dispatch@crownandbrim.co</span>
+          </div>
+          <div class="telemetry-item">
+            <span class="t-label">OPERATING STATUS:</span>
+            <span class="t-value" style="color: {{ section.settings.accent_color }};">[ ACTIVE: 24/7 // SLA: &lt; 12 HRS ]</span>
+          </div>
+          <div class="telemetry-item">
+            <span class="t-label">LOGISTICS NODE:</span>
+            <span class="t-value">GLOBAL SECURE DISPATCH</span>
+          </div>
+          <p class="telemetry-note">ALL COMMUNICATIONS ARE ENCRYPTED AND LOGGED DIRECTLY TO VAULT COMMAND.</p>
+        </div>
+      </div>
+
+      <!-- Right Column: Secure Transmission Form -->
+      <div class="contact-form-box" style="border-color: {{ section.settings.grid_border }};">
+        {%- form 'contact', id: 'ContactForm', class: 'terminal-form' -%}
+          {%- if form.posted_successfully? -%}
+            <div class="form-success-box" style="border-color: {{ section.settings.accent_color }}; color: {{ section.settings.accent_color }};">
+              <p>[ TRANSMISSION SUCCESSFUL. ENCRYPTED PACKET SENT TO VAULT COMMAND. ]</p>
+            </div>
+          {%- elsif form.errors -%}
+            <div class="form-error-box">
+              {{ form.errors | default_errors }}
+            </div>
+          {%- endif -%}
+
+          <div class="form-row-group">
+            <div class="input-field-group">
+              <label for="ContactFormName" class="terminal-label">[ OPERATOR CALLSIGN / NAME ]</label>
+              <input type="text" id="ContactFormName" name="contact[name]" value="{% if form.name %}{{ form.name }}{% endif %}" required class="terminal-input" style="border-color: {{ section.settings.grid_border }};">
+            </div>
+
+            <div class="input-field-group">
+              <label for="ContactFormEmail" class="terminal-label">[ SECURE FREQUENCY / EMAIL ]</label>
+              <input type="email" id="ContactFormEmail" name="contact[email]" autocorrect="off" autocapitalize="off" value="{% if form.email %}{{ form.email }}{% endif %}" required class="terminal-input" style="border-color: {{ section.settings.grid_border }};">
+            </div>
+          </div>
+
+          <div class="input-field-group">
+            <label for="ContactFormSubject" class="terminal-label">[ TRANSMISSION TYPE ]</label>
+            <select id="ContactFormSubject" name="contact[subject]" class="terminal-select" style="border-color: {{ section.settings.grid_border }};">
+              <option value="Vault Order Inquiry">VAULT ORDER INQUIRY</option>
+              <option value="Custom Fitting / Crown Matrix">CUSTOM FITTING / CROWN MATRIX</option>
+              <option value="Wholesale / Dispatch">WHOLESALE / DISPATCH</option>
+              <option value="General Protocol">GENERAL PROTOCOL</option>
+            </select>
+          </div>
+
+          <div class="input-field-group">
+            <label for="ContactFormMessage" class="terminal-label">[ TRANSMISSION CONTENT / MESSAGE ]</label>
+            <textarea rows="6" id="ContactFormMessage" name="contact[body]" required class="terminal-textarea" style="border-color: {{ section.settings.grid_border }};">{% if form.body %}{{ form.body }}{% endif %}</textarea>
+          </div>
+
+          <button type="submit" class="terminal-submit-btn" style="background: {{ section.settings.accent_color }}; color: #0E0E0E;">
+            [ EXECUTE SECURE TRANSMISSION ]
+          </button>
+        {%- endform -%}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+  .contact-terminal-architecture {
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
+    max-width: 100vw;
+    box-sizing: border-box;
+    padding: 80px 40px;
+    min-height: 80vh;
+  }
+  .contact-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+  .contact-page-header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-bottom: 1px solid {{ section.settings.grid_border }};
+    padding-bottom: 24px;
+  }
+  .blueprint-tag {
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+  }
+  .contact-page-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: clamp(2rem, 3vw, 3.5rem);
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 0;
+    line-height: 1.1;
+  }
+
+  /* Grid Layout */
+  .contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 40px;
+    align-items: start;
+  }
+
+  /* Telemetry Box */
+  .contact-telemetry-box {
+    border: 1px solid {{ section.settings.grid_border }};
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .telemetry-header {
+    border-bottom: 1px solid {{ section.settings.grid_border }};
+    padding-bottom: 16px;
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+  }
+  .telemetry-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .telemetry-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .t-label {
+    font-family: monospace;
+    font-size: 10px;
+    color: #666;
+    letter-spacing: 0.1em;
+  }
+  .t-value {
+    font-family: monospace;
+    font-size: 13px;
+    color: {{ section.settings.text_color }};
+  }
+  .telemetry-note {
+    font-family: monospace;
+    font-size: 10px;
+    color: #555;
+    letter-spacing: 0.05em;
+    line-height: 1.4;
+    margin-top: 10px;
+    border-top: 1px solid {{ section.settings.grid_border }};
+    padding-top: 16px;
+  }
+
+  /* Form Box */
+  .contact-form-box {
+    border: 1px solid {{ section.settings.grid_border }};
+    padding: 32px;
+    background: #121212;
+  }
+  .terminal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .form-row-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .input-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .terminal-label {
+    font-family: monospace;
+    font-size: 11px;
+    color: #888;
+    letter-spacing: 0.1em;
+  }
+  .terminal-input, .terminal-select, .terminal-textarea {
+    background: #0E0E0E;
+    border: 1px solid {{ section.settings.grid_border }};
+    color: {{ section.settings.text_color }};
+    font-family: monospace;
+    font-size: 13px;
+    padding: 14px;
+    width: 100%;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .terminal-input:focus, .terminal-select:focus, .terminal-textarea:focus {
+    border-color: {{ section.settings.accent_color }};
+  }
+  .terminal-select {
+    cursor: pointer;
+  }
+  .form-success-box {
+    border: 1px solid;
+    padding: 16px;
+    background: #0E0E0E;
+    font-family: monospace;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+  }
+  .form-error-box {
+    border: 1px solid #ff4444;
+    padding: 16px;
+    background: #0E0E0E;
+    font-family: monospace;
+    font-size: 12px;
+    color: #ff4444;
+  }
+  .terminal-submit-btn {
+    border: none;
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 16px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    text-align: center;
+    margin-top: 10px;
+  }
+  .terminal-submit-btn:hover {
+    opacity: 0.9;
+  }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .contact-grid {
+      grid-template-columns: 1fr;
+    }
+    .form-row-group {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Contact Terminal",
+  "settings": [
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Background",
+      "default": "#0E0E0E"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#F5F5F5"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Gold Accent",
+      "default": "#D4AF37"
+    },
+    {
+      "type": "color",
+      "id": "grid_border",
+      "label": "Grid Border",
+      "default": "#222222"
+    }
+  ]
+}
+{% endschema %}
