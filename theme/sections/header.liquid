@@ -1,3 +1,4 @@
+<!-- sections/header.liquid -->
 <header id="CrownHeader" style="background: transparent; border-bottom: none; padding: 22px 40px; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; box-sizing: border-box; transition: all 0.3s ease;">
   <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto; position: relative;">
     
@@ -40,9 +41,9 @@
       <a href="{{ routes.search_url }}" id="SearchModalTrigger" style="color: #F5F5F5; text-decoration: none; display: flex; align-items: center;" title="Search">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
       </a>
-      <a href="{{ routes.cart_url }}" style="color: #F5F5F5; text-decoration: none; display: flex; align-items: center; gap: 6px;" title="Cart">
+      <a href="{{ routes.cart_url }}" id="HeaderCartLink" style="color: #F5F5F5; text-decoration: none; display: flex; align-items: center; gap: 6px;" title="Cart">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
-        <span style="font-family: 'Inter', sans-serif; font-size: 11px; background: #D4AF37; color: #0E0E0E; padding: 1px 5px; font-weight: 700; border-radius: 2px;">{{ cart.item_count }}</span>
+        <span id="HeaderCartBadge" style="font-family: 'Inter', sans-serif; font-size: 11px; background: #D4AF37; color: #0E0E0E; padding: 1px 5px; font-weight: 700; border-radius: 2px;">{{ cart.item_count }}</span>
       </a>
     </div>
 

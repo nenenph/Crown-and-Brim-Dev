@@ -6,7 +6,7 @@
     <!-- Drawer Header -->
     <div class="drawer-header" style="border-color: {{ section.settings.grid_border }};">
       <span class="drawer-title" style="color: {{ section.settings.accent_color }};">
-        [ VAULT INVENTORY // <span id="CartItemCountHeader">0</span> ITEMS ]
+        [ CART <span id="CartItemCountHeader">{{ cart.item_count }}</span> ITEM{% if cart.item_count != 1 %}S{% endif %} ]
       </span>
       <button type="button" class="drawer-close-btn" onclick="closeCartDrawer()" aria-label="Close cart">
         [ CLOSE × ]
@@ -15,17 +15,46 @@
 
     <!-- Drawer Body / Item List -->
     <div class="drawer-body" id="CartDrawerBody">
-      <!-- Dynamically populated via AJAX -->
-      <div class="drawer-empty-state">
-        <p>[ VAULT IS CURRENTLY EMPTY ]</p>
-      </div>
+      {%- if cart.items.size > 0 -%}
+        {%- for item in cart.items -%}
+          <div class="drawer-item-row" data-key="{{ item.key }}">
+            <div class="drawer-item-img">
+              {%- if item.image -%}
+                <img src="{{ item.image | img_url: '200x' }}" alt="{{ item.title | escape }}" loading="lazy">
+              {%- else -%}
+                <div style="font-family: monospace; font-size: 10px; color: #666;">[ NO IMG ]</div>
+              {%- endif -%}
+            </div>
+            <div class="drawer-item-details">
+              <a href="{{ item.url }}" class="drawer-item-title">{{ item.product.title }}</a>
+              {%- unless item.product.has_only_default_variant -%}
+                <span class="drawer-item-size">{{ item.variant.title }}</span>
+              {%- endunless -%}
+              <span class="drawer-item-price">{{ item.final_line_price | money }}</span>
+              
+              <div class="drawer-item-controls">
+                <div class="quantity-stepper">
+                  <button type="button" class="qty-btn" onclick="updateItemQuantity('{{ item.key }}', {{ item.quantity | minus: 1 }})">-</button>
+                  <input type="text" class="qty-input" value="{{ item.quantity }}" readonly>
+                  <button type="button" class="qty-btn" onclick="updateItemQuantity('{{ item.key }}', {{ item.quantity | plus: 1 }})">+</button>
+                </div>
+                <button type="button" class="drawer-item-remove" onclick="updateItemQuantity('{{ item.key }}', 0)">[ REMOVE ]</button>
+              </div>
+            </div>
+          </div>
+        {%- endfor -%}
+      {%- else -%}
+        <div class="drawer-empty-state">
+          <p>[ CART IS CURRENTLY EMPTY ]</p>
+        </div>
+      {%- endif -%}
     </div>
 
     <!-- Drawer Footer / Checkout -->
     <div class="drawer-footer" style="border-color: {{ section.settings.grid_border }};">
       <div class="drawer-subtotal-row">
         <span class="subtotal-label">SUBTOTAL:</span>
-        <span class="subtotal-price" id="CartDrawerSubtotal" style="color: {{ section.settings.accent_color }};">$0.00 USD</span>
+        <span class="subtotal-price" id="CartDrawerSubtotal" style="color: {{ section.settings.accent_color }};">{{ cart.total_price | money }}</span>
       </div>
       <p class="drawer-taxes-note">SHIPPING & TAXES CALCULATED AT CHECKOUT.</p>
       
@@ -114,6 +143,7 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+    transition: opacity 0.2s ease;
   }
   .drawer-empty-state {
     text-align: center;
@@ -264,6 +294,160 @@
     opacity: 0.9;
   }
 </style>
+
+<script>
+  window.openCartDrawer = function() {
+    const drawer = document.getElementById('CartDrawer');
+    if (drawer) {
+      drawer.style.display = 'flex';
+      void drawer.offsetWidth; 
+      drawer.classList.add('open');
+    }
+  };
+
+  window.closeCartDrawer = function() {
+    const drawer = document.getElementById('CartDrawer');
+    if (drawer) {
+      drawer.classList.remove('open');
+      setTimeout(() => {
+        drawer.style.display = 'none';
+      }, 300);
+    }
+  };
+
+  function syncHeaderCartCount(count) {
+    const explicitBadge = document.getElementById('HeaderCartBadge');
+    if (explicitBadge) explicitBadge.textContent = count;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Intercept header cart icon clicks
+    document.addEventListener('click', (e) => {
+      const cartTrigger = e.target.closest('a[href*="/cart"], .cart-icon-wrapper, [data-cart-trigger]');
+      if (cartTrigger && !e.target.closest('#CartDrawer')) {
+        e.preventDefault();
+        window.openCartDrawer();
+      }
+    });
+
+    // Intercept Add to Cart form submissions
+    document.addEventListener('submit', async (e) => {
+      const form = e.target.closest('form[action*="/cart/add"]');
+      if (!form) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const submitButton = form.querySelector('[type="submit"], button[name="add"]');
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.dataset.origText = submitButton.innerHTML;
+        submitButton.innerHTML = '[ ADDING... ]';
+      }
+
+      try {
+        const formData = new FormData(form);
+        const response = await fetch('{{ routes.cart_add_url }}', {
+          method: 'POST',
+          body: formData,
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        if (!response.ok) throw new Error('Failed to add item');
+
+        // Instantly refresh and open drawer
+        await refreshCartDrawer();
+        window.openCartDrawer();
+      } catch (error) {
+        console.error('[CART ADD ERROR]:', error);
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.innerHTML = submitButton.dataset.origText;
+        }
+      }
+    }, true);
+  });
+
+  // OPTIMIZED QUANTITY UPDATER (Instant local feedback)
+  async function updateItemQuantity(key, quantity) {
+    // 1. Find the specific row in the drawer so we can update it immediately visually
+    const row = document.querySelector(`.drawer-item-row[data-key="${key}"]`);
+    const qtyInput = row ? row.querySelector('.qty-input') : null;
+    
+    // Save previous state just in case we need to rollback on a network error
+    const oldQty = qtyInput ? parseInt(qtyInput.value) : 0;
+
+    // 2. INSTANT UI FEEDBACK (Zero Latency)
+    if (qtyInput) {
+      if (quantity <= 0) {
+        if (row) row.style.opacity = '0.3'; // Fade out immediately
+      } else {
+        qtyInput.value = quantity;
+      }
+    }
+
+    try {
+      // 3. Send request to Shopify quietly in the background
+      const response = await fetch('{{ routes.cart_change_url }}', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest' 
+        },
+        body: JSON.stringify({ id: key, quantity: quantity })
+      });
+
+      if (!response.ok) throw new Error('Failed to update cart');
+      
+      const cartData = await response.json();
+      
+      // Update header badge instantly from response
+      if (typeof cartData.item_count !== 'undefined') {
+        syncHeaderCartCount(cartData.item_count);
+      }
+
+      // Sync the exact HTML state from server quietly
+      await refreshCartDrawer();
+    } catch (err) {
+      console.error('[CART QUANTITY ERROR]:', err);
+      // Rollback UI if it failed
+      if (qtyInput) qtyInput.value = oldQty;
+      if (row) row.style.opacity = '1';
+    }
+  }
+
+  async function refreshCartDrawer() {
+    try {
+      const sectionRes = await fetch('{{ routes.root_url }}?sections=cart-drawer');
+      const sectionData = await sectionRes.json();
+
+      if (sectionData['cart-drawer']) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(sectionData['cart-drawer'], 'text/html');
+
+        const newBody = doc.getElementById('CartDrawerBody');
+        const currBody = document.getElementById('CartDrawerBody');
+        if (currBody && newBody) currBody.innerHTML = newBody.innerHTML;
+
+        const newSubtotal = doc.getElementById('CartDrawerSubtotal');
+        const currSubtotal = document.getElementById('CartDrawerSubtotal');
+        if (currSubtotal && newSubtotal) currSubtotal.innerHTML = newSubtotal.innerHTML;
+
+        const newHeaderCount = doc.getElementById('CartItemCountHeader');
+        const currHeaderCount = document.getElementById('CartItemCountHeader');
+        if (currHeaderCount && newHeaderCount) currHeaderCount.innerHTML = newHeaderCount.innerHTML;
+        
+        // Sync header counter text as well
+        const cartRes = await fetch('{{ routes.cart_url }}.js');
+        const cart = await cartRes.json();
+        syncHeaderCartCount(cart.item_count);
+      }
+    } catch (err) {
+      console.error('[CART REFRESH ERROR]:', err);
+    }
+  }
+</script>
 
 {% schema %}
 {
