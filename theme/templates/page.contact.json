@@ -1,0 +1,16 @@
+{
+  "sections": {
+    "main": {
+      "type": "contact-terminal",
+      "settings": {
+        "bg_color": "#0E0E0E",
+        "text_color": "#F5F5F5",
+        "accent_color": "#D4AF37",
+        "grid_border": "#222222"
+      }
+    }
+  },
+  "order": [
+    "main"
+  ]
+}

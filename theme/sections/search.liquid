@@ -1,70 +1,796 @@
-{% comment %}
-  This section is used in the search template to render search results for
-  products, articles, and pages.
+<!-- sections/search.liquid -->
+<div class="search-terminal-architecture" style="background-color: {{ section.settings.bg_color }}; color: {{ section.settings.text_color }};">
+  <div class="search-container">
+    
+    <div class="search-page-header">
+      <span class="blueprint-tag" style="color: {{ section.settings.accent_color }};">
+        [ SYSTEM QUERY RESULTS // VAULT SEARCH ]
+      </span>
+      <h1 class="search-page-title">
+        {%- if search.performed -%}
+          SEARCH: "{{ search.terms }}" <span class="result-count">[{{ search.results_count }} FOUND]</span>
+        {%- else -%}
+          SEARCH TERMINAL
+        {%- endif -%}
+      </h1>
+    </div>
 
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/search
-{% endcomment %}
+    <!-- Re-search bar inside the page -->
+    <div class="search-page-form-wrapper" style="border-color: {{ section.settings.grid_border }};">
+      <form action="{{ routes.search_url }}" method="get" role="search" class="search-page-form">
+        <input type="hidden" name="type" value="product">
+        <input type="search" name="q" value="{{ search.terms | escape }}" placeholder="SEARCH ARTIFACTS..." class="terminal-search-input" style="border-color: {{ section.settings.grid_border }};">
+        <button type="submit" class="terminal-search-submit" style="background: {{ section.settings.accent_color }}; color: #0E0E0E;">
+          [ SEARCH ]
+        </button>
+      </form>
+    </div>
 
-<h1>{{ 'search.title' | t }}</h1>
+    {%- if search.performed -%}
+      <!-- Brutalist Utility Bar (Filter & Sort for Search Results) -->
+      <div class="utility-bar" style="border-color: {{ section.settings.grid_border }};">
+        <button type="button" class="filter-trigger" onclick="openFilterDrawer()">
+          [ FILTER + ]
+        </button>
 
-<form action="{{ routes.search_url }}" method="get" role="search">
-  <input
-    type="search"
-    size="50"
-    name="q"
-    value="{{ search.terms | escape }}"
-    placeholder="{{ 'search.placeholder' | t }}"
-  >
-  <button type="submit">{{ 'search.submit' | t }}</button>
-</form>
+        <div class="active-filters-summary">
+          {%- for filter in search.filters -%}
+            {%- for value in filter.active_values -%}
+              <a href="{{ value.url_to_remove }}" class="active-filter-pill">
+                {{ value.label }} ✕
+              </a>
+            {%- endfor -%}
+          {%- endfor -%}
+        </div>
 
-{% if search.performed %}
-  {% if search.results_count == 0 %}
-    <p>{{ 'search.no_results_html' | t: terms: search.terms }}</p>
-  {% else %}
-    <p>{{ 'search.results_for_html' | t: terms: search.terms, count: search.results_count }}</p>
+        <form class="sort-form" id="SearchSortForm" action="{{ routes.search_url }}" method="get">
+          <input type="hidden" name="q" value="{{ search.terms | escape }}">
+          <input type="hidden" name="type" value="product">
+          <span class="sort-label">SORT BY:</span>
+          <select name="sort_by" class="brutalist-select" onchange="this.form.submit();" style="border-color: {{ section.settings.grid_border }}; color: {{ section.settings.text_color }};">
+            {%- for option in search.sort_options -%}
+              <option value="{{ option.value }}" {% if option.value == search.sort_by %}selected="selected"{% endif %}>
+                {{ option.name | escape }}
+              </option>
+            {%- endfor -%}
+          </select>
+        </form>
+      </div>
 
-    <div class="search-results">
-      {% paginate search.results by 20 %}
-        {% # Search result items may be an article, a page, or a product. %}
-        {% for result in search.results %}
-          <div class="search-result">
-            {% assign featured_image = result.featured_image | default: result.image %}
-            {% if featured_image %}
-              {% render 'image', class: 'search-result__image', image: featured_image, url: result.url, width: 400 %}
-            {% endif %}
-            <div class="search-result__content">
-              <p>
-                {{ result.title | link_to: result.url }}
-                {% if result.price %}
-                  {{ result.price | money_with_currency }}
-                {% endif %}
-              </p>
+      {%- if search.results.size == 0 -%}
+        <div class="search-empty-state" style="border-color: {{ section.settings.grid_border }};">
+          <p>[ NO ARTIFACTS FOUND MATCHING "{% if search.terms %}{{ search.terms }}{% endif %}" ]</p>
+          <a href="/collections/all" class="terminal-back-btn" style="color: {{ section.settings.accent_color }}; border-color: {{ section.settings.accent_color }};">
+            [ RETURN TO CATALOG ]
+          </a>
+        </div>
+      {%- else -%}
+        {% paginate search.results by 24 %}
+          <div class="blueprint-product-grid">
+            {%- for item in search.results -%}
+              {%- if item.object_type == 'product' -%}
+                <div class="brutalist-card" style="border-color: {{ section.settings.grid_border }}; background: {{ section.settings.card_bg }};">
+                  <a href="{{ item.url }}" class="card-link">
+                    
+                    <!-- Image Swap Architecture with Inner Padding -->
+                    <div class="card-image-wrapper">
+                      {%- if item.featured_image -%}
+                        <img src="{{ item.featured_image | img_url: '600x' }}" alt="{{ item.title | escape }}" class="primary-image" loading="lazy">
+                        {% if item.images[1] %}
+                          <img src="{{ item.images[1] | img_url: '600x' }}" alt="{{ item.title | escape }}" class="secondary-image" loading="lazy">
+                        {% endif %}
+                      {%- else -%}
+                        <div class="no-img" style="font-family: monospace; font-size: 11px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%;">[ NO IMAGE ]</div>
+                      {%- endif -%}
+                    </div>
+
+                    <!-- Card Meta -->
+                    <div class="card-meta" style="border-color: {{ section.settings.grid_border }};">
+                      <h3 class="product-title" style="color: {{ section.settings.text_color }};">{{ item.title }}</h3>
+                      
+                      <div class="card-tags">
+                        <span class="tag-badge">
+                          {%- if item.type != blank -%}
+                            {{ item.type | upcase }}
+                          {%- elsif item.tags.size > 0 -%}
+                            {{ item.tags.first | upcase }}
+                          {%- else -%}
+                            ARTIFACT
+                          {%- endif -%}
+                        </span>
+                      </div>
+
+                      <div class="price-architecture" style="color: {{ section.settings.accent_color }};">
+                        {%- if item.price_varies -%}
+                          FROM {{ item.price_min | money }}
+                        {%- else -%}
+                          {{ item.price | money }}
+                        {%- endif -%}
+                      </div>
+                    </div>
+
+                  </a>
+                </div>
+              {%- else -%}
+                <div class="brutalist-card" style="border-color: {{ section.settings.grid_border }}; background: {{ section.settings.card_bg }}; padding: 24px; display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <span style="font-family: monospace; font-size: 10px; color: #888; text-transform: uppercase;">[{{ item.object_type }}]</span>
+                    <h3 style="font-family: 'Oswald', sans-serif; font-size: 18px; margin: 8px 0 12px; text-transform: uppercase; color: {{ section.settings.text_color }};">{{ item.title }}</h3>
+                    <p style="font-family: monospace; font-size: 12px; color: #aaa; line-height: 1.4;">{{ item.content | strip_html | truncate: 120 }}</p>
+                  </div>
+                  <a href="{{ item.url }}" style="font-family: monospace; font-size: 11px; color: {{ section.settings.accent_color }}; text-decoration: none; margin-top: 16px; display: inline-block;">[ ACCESS RECORD &rarr; ]</a>
+                </div>
+              {%- endif -%}
+            {%- endfor -%}
+          </div>
+
+          <!-- Brutalist Pagination Controls -->
+          {%- if paginate.pages > 1 -%}
+            <div class="pagination-architecture" style="border-color: {{ section.settings.grid_border }};">
+              {%- if paginate.previous -%}
+                <a href="{{ paginate.previous.url }}" class="pagination-btn" style="border-color: {{ section.settings.grid_border }}; color: {{ section.settings.text_color }};">[ PREV ]</a>
+              {%- else -%}
+                <span class="pagination-btn disabled">[ PREV ]</span>
+              {%- endif -%}
+
+              <div class="pagination-numbers">
+                {%- for part in paginate.parts -%}
+                  {%- if part.is_link -%}
+                    <a href="{{ part.url }}" class="page-number" style="border-color: {{ section.settings.grid_border }}; color: {{ section.settings.text_color }};">{{ part.title }}</a>
+                  {%- else -%}
+                    {%- if part.title == paginate.current_page -%}
+                      <span class="page-number active" style="background: {{ section.settings.accent_color }}; color: #0E0E0E; border-color: {{ section.settings.accent_color }};">{{ part.title }}</span>
+                    {%- else -%}
+                      <span class="page-number ellipsis">{{ part.title }}</span>
+                    {%- endif -%}
+                  {%- endif -%}
+                {%- endfor -%}
+              </div>
+
+              {%- if paginate.next -%}
+                <a href="{{ paginate.next.url }}" class="pagination-btn" style="border-color: {{ section.settings.grid_border }}; color: {{ section.settings.text_color }};">[ NEXT ]</a>
+              {%- else -%}
+                <span class="pagination-btn disabled">[ NEXT ]</span>
+              {%- endif -%}
+            </div>
+          {%- endif -%}
+        {% endpaginate %}
+      {%- endif -%}
+    {%- endif -%}
+
+  </div>
+</div>
+
+<!-- Slide-Out Filter Drawer -->
+<div id="FilterDrawer" class="filter-drawer" style="background-color: {{ section.settings.bg_color }}; border-color: {{ section.settings.grid_border }};">
+  <div class="drawer-header" style="border-color: {{ section.settings.grid_border }};">
+    <div>
+      <h2 style="font-family: 'Oswald', sans-serif; color: {{ section.settings.text_color }}; margin: 0; font-size: 22px;">FILTER SEARCH</h2>
+      <span style="font-family: monospace; font-size: 10px; color: #888888;">[ CROWN & BRIM SPECIFICATIONS ]</span>
+    </div>
+    <button type="button" class="close-drawer" onclick="closeFilterDrawer()" style="color: {{ section.settings.text_color }}; border-color: {{ section.settings.grid_border }};">✕</button>
+  </div>
+  
+  <form class="filter-form" id="SearchFiltersForm" method="get" action="{{ routes.search_url }}">
+    <input type="hidden" name="q" value="{{ search.terms | escape }}">
+    <input type="hidden" name="type" value="product">
+    {%- if search.sort_by != blank -%}
+      <input type="hidden" name="sort_by" value="{{ search.sort_by }}">
+    {%- endif -%}
+
+    <!-- Dynamic Shopify Native Search Filters -->
+    {%- for filter in search.filters -%}
+      <div class="filter-group" style="border-color: {{ section.settings.grid_border }};">
+        <h3 class="filter-title" style="color: {{ section.settings.accent_color }};">{{ filter.label | upcase }}</h3>
+        
+        {%- if filter.type == 'price_range' -%}
+          <div class="price-range-inputs">
+            <div class="price-field" style="border-color: {{ section.settings.grid_border }};">
+              <span>$</span>
+              <input type="number" name="{{ filter.min_value.param_name }}" value="{{ filter.min_value.value | money_without_currency | replace: ',', '' }}" placeholder="0" min="0">
+            </div>
+            <span style="color:#666; font-family: monospace;">TO</span>
+            <div class="price-field" style="border-color: {{ section.settings.grid_border }};">
+              <span>$</span>
+              <input type="number" name="{{ filter.max_value.param_name }}" value="{{ filter.max_value.value | money_without_currency | replace: ',', '' }}" placeholder="200" min="0">
             </div>
           </div>
-        {% endfor %}
+        {%- elsif filter.label == 'Accessory size' or filter.label == 'Size' -%}
+          <div class="size-pill-grid">
+            {%- for value in filter.values -%}
+              {% assign formatted_size = value.label | replace: '-1-8', ' 1/8' | replace: '-1-4', ' 1/4' | replace: '-3-8', ' 3/8' | replace: '-1-2', ' 1/2' | replace: '-5-8', ' 5/8' | replace: '-3-4', ' 3/4' %}
+              <label class="size-pill">
+                <input type="checkbox" name="{{ value.param_name }}" value="{{ value.value }}"
+                  {% if value.active %}checked{% endif %}
+                  onchange="this.form.submit();"
+                >
+                <span style="border-color: {{ section.settings.grid_border }};">{{ formatted_size }}</span>
+              </label>
+            {%- endfor -%}
+          </div>
+        {%- elsif filter.label == 'Color' or filter.label == 'Cap Color' -%}
+          <div class="color-swatch-grid">
+            {%- for value in filter.values -%}
+              {% assign color_handle = value.label | handleize %}
+              <label class="swatch-btn" style="color: {{ section.settings.text_color }};">
+                <input type="checkbox" name="{{ value.param_name }}" value="{{ value.value }}"
+                  {% if value.active %}checked{% endif %}
+                  onchange="this.form.submit();"
+                >
+                <span class="swatch {{ color_handle }}"></span> {{ value.label | capitalize }} ({{ value.count }})
+              </label>
+            {%- endfor -%}
+          </div>
+        {%- else -%}
+          <ul class="filter-list">
+            {%- for value in filter.values -%}
+              <li>
+                <label class="filter-label" style="color: {{ section.settings.text_color }};">
+                  <input type="checkbox" name="{{ value.param_name }}" value="{{ value.value }}"
+                    {% if value.active %}checked{% endif %}
+                    onchange="this.form.submit();"
+                  >
+                  <span class="checkbox-custom" style="border-color: {{ section.settings.grid_border }};"></span>
+                  {{ value.label }} <span class="count" style="color: #777;">({{ value.count }})</span>
+                </label>
+              </li>
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+      </div>
+    {%- endfor -%}
 
-        {{ paginate | default_pagination }}
-      {% endpaginate %}
+    <div class="drawer-actions">
+      <button type="submit" class="apply-btn" style="background: {{ section.settings.accent_color }};">APPLY SEARCH FILTERS</button>
+      <a href="{{ routes.search_url }}?q={{ search.terms | url_encode }}&type=product" class="clear-filters">RESET ALL</a>
     </div>
-  {% endif %}
-{% endif %}
+  </form>
+</div>
 
-{% stylesheet %}
-  .search-results {
+<div id="DrawerOverlay" class="drawer-overlay" onclick="closeFilterDrawer()"></div>
+
+<style>
+  .search-terminal-architecture {
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
+    max-width: 100vw;
+    box-sizing: border-box;
+    padding: 60px 40px 100px;
+    min-height: 80vh;
+  }
+  .search-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+  .search-page-header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-bottom: 1px solid {{ section.settings.grid_border }};
+    padding-bottom: 24px;
+  }
+  .blueprint-tag {
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+  }
+  .search-page-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: clamp(1.8rem, 3vw, 3rem);
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 0;
+    line-height: 1.1;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .result-count {
+    font-family: monospace;
+    font-size: 14px;
+    color: {{ section.settings.accent_color }};
+    letter-spacing: 0.1em;
+  }
+  .search-page-form-wrapper {
+    background: #121212;
+    border: 1px solid {{ section.settings.grid_border }};
+    padding: 20px;
+  }
+  .search-page-form {
+    display: flex;
+    gap: 12px;
+  }
+  .terminal-search-input {
+    flex-grow: 1;
+    background: #0E0E0E;
+    border: 1px solid {{ section.settings.grid_border }};
+    color: {{ section.settings.text_color }};
+    font-family: monospace;
+    font-size: 13px;
+    padding: 14px 20px;
+    outline: none;
+  }
+  .terminal-search-input:focus {
+    border-color: {{ section.settings.accent_color }};
+  }
+  .terminal-search-submit {
+    border: none;
+    font-family: 'Oswald', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 0 24px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: opacity 0.2s;
+  }
+  .terminal-search-submit:hover {
+    opacity: 0.9;
+  }
+
+  /* Utility Bar */
+  .utility-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid {{ section.settings.grid_border }};
+    padding-bottom: 20px;
+  }
+  .filter-trigger {
+    background: none;
+    border: none;
+    color: {{ section.settings.text_color }};
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+  }
+  .filter-trigger:hover {
+    color: {{ section.settings.accent_color }};
+  }
+  .active-filters-summary {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .active-filter-pill {
+    font-family: monospace;
+    font-size: 10px;
+    padding: 4px 8px;
+    background: #1e1e1e;
+    color: {{ section.settings.accent_color }};
+    border: 1px solid {{ section.settings.accent_color }};
+    text-decoration: none;
+  }
+  .sort-form {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .sort-label {
+    font-family: monospace;
+    font-size: 11px;
+    color: #888888;
+  }
+  .brutalist-select {
+    background: transparent;
+    border: 1px solid {{ section.settings.grid_border }};
+    padding: 8px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    text-transform: uppercase;
+    cursor: pointer;
+    outline: none;
+  }
+
+  /* Brutalist Product Grid & Cards */
+  .blueprint-product-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
   }
-  .search-results .prev,
-  .search-results .page,
-  .search-results .next {
-    grid-column: 1 / -1;
+  .brutalist-card {
+    border: 1px solid {{ section.settings.grid_border }};
+    background: {{ section.settings.card_bg }};
+    transition: border-color 0.3s;
   }
-{% endstylesheet %}
+  .brutalist-card:hover {
+    border-color: {{ section.settings.accent_color }};
+  }
+  .card-link {
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .card-image-wrapper {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    background: #141414;
+    padding: 24px;
+  }
+  .primary-image, .secondary-image {
+    width: calc(100% - 48px);
+    height: calc(100% - 48px);
+    object-fit: contain;
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    transition: opacity 0.4s ease;
+  }
+  .secondary-image {
+    opacity: 0;
+  }
+  .card-link:hover .secondary-image {
+    opacity: 1;
+  }
+  .card-link:hover .primary-image {
+    opacity: 0;
+  }
+  .card-meta {
+    padding: 20px;
+    text-align: center;
+    border-top: 1px solid {{ section.settings.grid_border }};
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+  .product-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 0;
+    letter-spacing: 0.03em;
+  }
+  .card-tags {
+    display: flex;
+    gap: 6px;
+  }
+  .tag-badge {
+    font-family: monospace;
+    font-size: 9px;
+    color: #888888;
+    background: #181818;
+    padding: 2px 6px;
+    border: 1px solid #222;
+  }
+  .price-architecture {
+    font-family: monospace;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  /* Pagination */
+  .pagination-architecture {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid {{ section.settings.grid_border }};
+    font-family: monospace;
+    font-size: 12px;
+  }
+  .pagination-btn {
+    text-decoration: none;
+    padding: 10px 20px;
+    border: 1px solid;
+    transition: all 0.2s ease;
+  }
+  .pagination-btn:hover:not(.disabled) {
+    border-color: {{ section.settings.accent_color }};
+    color: {{ section.settings.accent_color }};
+  }
+  .pagination-btn.disabled {
+    color: #444444;
+    border-color: #222222;
+    cursor: not-allowed;
+  }
+  .pagination-numbers {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .page-number {
+    text-decoration: none;
+    padding: 8px 14px;
+    border: 1px solid;
+  }
+  .page-number.ellipsis {
+    border: none;
+    color: #666666;
+  }
+
+  /* Filter Drawer */
+  .filter-drawer {
+    position: fixed;
+    top: 0;
+    left: -420px;
+    width: 100%;
+    max-width: 420px;
+    height: 100vh;
+    z-index: 100000;
+    border-right: 1px solid;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+  .filter-drawer.open {
+    transform: translateX(420px);
+  }
+  .drawer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(14,14,14,0.85);
+    backdrop-filter: blur(6px);
+    z-index: 99999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s;
+  }
+  .drawer-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+  .drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 32px 24px 20px 24px;
+    border-bottom: 1px solid;
+  }
+  .close-drawer {
+    background: none;
+    border: 1px solid;
+    padding: 6px 12px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .filter-group {
+    border-bottom: 1px solid;
+    padding: 20px 24px;
+  }
+  .filter-title {
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: 700;
+    margin: 0 0 14px 0;
+    letter-spacing: 0.1em;
+  }
+  .price-range-inputs {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .price-field {
+    display: flex;
+    align-items: center;
+    background: #141414;
+    border: 1px solid;
+    padding: 6px 10px;
+    font-family: monospace;
+    font-size: 12px;
+    width: 100%;
+  }
+  .price-field input {
+    background: transparent;
+    border: none;
+    color: #fff;
+    width: 100%;
+    outline: none;
+    font-family: monospace;
+  }
+  .color-swatch-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .swatch-btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .swatch-btn input { display: none; }
+  .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: inline-block;
+    border: 1px solid #333;
+  }
+  .swatch.blue { background: #1E3A8A; }
+  .swatch.navy { background: #0A192F; }
+  .swatch.beige { background: #C2B280; }
+  .swatch.black { background: #111111; }
+  .swatch.green { background: #004B23; }
+  .swatch.white { background: #FFFFFF; border-color: #888; }
+  .swatch.yellow, .swatch.yellow-gold { background: #EAB308; }
+  .swatch.maroon, .swatch.maroon-black { background: #800020; }
+  .swatch.brown, .swatch.brown-beige { background: #5C4033; }
+  .swatch-btn input:checked + .swatch {
+    outline: 2px solid {{ section.settings.accent_color }};
+    outline-offset: 2px;
+  }
+  .filter-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .filter-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .checkbox-custom {
+    width: 14px;
+    height: 14px;
+    border: 1px solid;
+    display: inline-block;
+  }
+  .filter-label input:checked + .checkbox-custom {
+    background-color: {{ section.settings.accent_color }};
+    border-color: {{ section.settings.accent_color }};
+  }
+  .size-pill-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .size-pill input { display: none; }
+  .size-pill span {
+    display: block;
+    text-align: center;
+    padding: 8px 0;
+    border: 1px solid;
+    font-family: monospace;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .size-pill input:checked + span {
+    border-color: {{ section.settings.accent_color }};
+    color: {{ section.settings.accent_color }};
+    background: #181818;
+  }
+  .drawer-actions {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .apply-btn {
+    color: #0E0E0E;
+    border: none;
+    padding: 14px;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+  }
+  .clear-filters {
+    text-align: center;
+    font-family: monospace;
+    font-size: 11px;
+    color: #888;
+    text-decoration: underline;
+  }
+  .search-empty-state {
+    border: 1px dashed;
+    padding: 60px 24px;
+    text-align: center;
+    font-family: monospace;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    background: #121212;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  .terminal-back-btn {
+    font-family: monospace;
+    font-size: 11px;
+    padding: 12px 20px;
+    border: 1px solid;
+    text-decoration: none;
+    letter-spacing: 0.1em;
+    background: #0E0E0E;
+  }
+
+  @media (max-width: 1024px) {
+    .blueprint-product-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+  }
+  @media (max-width: 640px) {
+    .search-terminal-architecture {
+      padding: 40px 16px;
+    }
+    .utility-bar {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .blueprint-product-grid {
+      grid-template-columns: 1fr;
+    }
+    .filter-drawer {
+      left: -100%;
+      max-width: 100%;
+    }
+    .filter-drawer.open {
+      transform: translateX(100%);
+    }
+  }
+</style>
+
+<script>
+  function openFilterDrawer() {
+    document.getElementById('FilterDrawer').classList.add('open');
+    document.getElementById('DrawerOverlay').classList.add('open');
+  }
+  function closeFilterDrawer() {
+    document.getElementById('FilterDrawer').classList.remove('open');
+    document.getElementById('DrawerOverlay').classList.remove('open');
+  }
+</script>
 
 {% schema %}
 {
-  "name": "t:general.search",
-  "settings": []
+  "name": "Search Terminal",
+  "settings": [
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Background",
+      "default": "#0E0E0E"
+    },
+    {
+      "type": "color",
+      "id": "card_bg",
+      "label": "Card Background",
+      "default": "#0E0E0E"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#F5F5F5"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Gold Accent",
+      "default": "#D4AF37"
+    },
+    {
+      "type": "color",
+      "id": "grid_border",
+      "label": "Grid Border",
+      "default": "#222222"
+    }
+  ]
 }
 {% endschema %}

@@ -37,7 +37,7 @@
 
     <!-- Right: Utility Icons -->
     <div style="display: flex; align-items: center; gap: 20px;">
-      <a href="{{ routes.search_url }}" style="color: #F5F5F5; text-decoration: none; display: flex; align-items: center;" title="Search">
+      <a href="{{ routes.search_url }}" id="SearchModalTrigger" style="color: #F5F5F5; text-decoration: none; display: flex; align-items: center;" title="Search">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
       </a>
       <a href="{{ routes.cart_url }}" style="color: #F5F5F5; text-decoration: none; display: flex; align-items: center; gap: 6px;" title="Cart">
@@ -69,6 +69,26 @@
     </nav>
   </div>
   <div id="DrawerOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 9999; display: none; opacity: 0; transition: opacity 0.3s ease;"></div>
+
+  <!-- Terminal Search Modal Overlay -->
+  <div id="TerminalSearchModal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(14, 14, 14, 0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 10005; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.25s ease;">
+    <div style="width: 100%; max-width: 600px; padding: 0 24px; box-sizing: border-box;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <span style="font-family: monospace; font-size: 11px; color: #D4AF37; letter-spacing: 0.15em;">[ SYSTEM QUERY // VAULT SEARCH ]</span>
+        <button type="button" id="CloseSearchModal" style="background: none; border: none; color: #888; font-family: monospace; font-size: 12px; cursor: pointer; letter-spacing: 0.1em;" onmouseover="this.style.color='#F5F5F5'" onmouseout="this.style.color='#888'">[ CLOSE X ]</button>
+      </div>
+      
+      <form action="{{ routes.search_url }}" method="get" role="search" style="display: flex; border: 1px solid #333; background: #141414;">
+        <input type="search" name="q" value="{{ search.terms | escape }}" placeholder="ENTER ARTIFACT OR CROWN QUERY..." style="flex-grow: 1; background: transparent; border: none; color: #F5F5F5; font-family: monospace; font-size: 14px; padding: 18px 20px; outline: none;" id="TerminalSearchInput" autocomplete="off">
+        <button type="submit" style="background: #D4AF37; border: none; color: #0E0E0E; font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 700; padding: 0 24px; cursor: pointer; letter-spacing: 0.05em; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+          SEARCH
+        </button>
+      </form>
+      <div style="margin-top: 12px; font-family: monospace; font-size: 10px; color: #666; letter-spacing: 0.05em;">
+        PRESS ESC TO ABORT OR HIT ENTER TO EXECUTE QUERY.
+      </div>
+    </div>
+  </div>
 </header>
 
 <style>
@@ -114,6 +134,48 @@
   if (menuBtn) menuBtn.addEventListener('click', openMenu);
   if (closeBtn) closeBtn.addEventListener('click', closeMenu);
   if (overlay) overlay.addEventListener('click', closeMenu);
+
+  // Search Modal Interception Logic
+  const searchTrigger = document.getElementById('SearchModalTrigger');
+  const searchModal = document.getElementById('TerminalSearchModal');
+  const closeSearchBtn = document.getElementById('CloseSearchModal');
+  const searchInput = document.getElementById('TerminalSearchInput');
+
+  function openSearchModal(e) {
+    if (e) e.preventDefault();
+    searchModal.style.display = 'flex';
+    setTimeout(() => {
+      searchModal.style.opacity = '1';
+      if (searchInput) searchInput.focus();
+    }, 10);
+  }
+
+  function closeSearchModal() {
+    searchModal.style.opacity = '0';
+    setTimeout(() => {
+      searchModal.style.display = 'none';
+    }, 250);
+  }
+
+  if (searchTrigger) searchTrigger.addEventListener('click', openSearchModal);
+  if (closeSearchBtn) closeSearchBtn.addEventListener('click', closeSearchModal);
+
+  // Close on ESC key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeSearchModal();
+      closeMenu();
+    }
+  });
+
+  // Close when clicking outside the search box
+  if (searchModal) {
+    searchModal.addEventListener('click', function(e) {
+      if (e.target === searchModal) {
+        closeSearchModal();
+      }
+    });
+  }
 </script>
 
 {% schema %}
