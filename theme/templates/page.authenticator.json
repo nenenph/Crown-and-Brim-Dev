@@ -1,0 +1,11 @@
+{
+  "sections": {
+    "authenticator": {
+      "type": "serial-authenticator",
+      "settings": {}
+    }
+  },
+  "order": [
+    "authenticator"
+  ]
+}

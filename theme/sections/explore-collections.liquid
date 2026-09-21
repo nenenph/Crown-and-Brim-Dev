@@ -1,0 +1,286 @@
+
+<!-- sections/explore-collections.liquid -->
+<div class="explore-terminal-architecture" style="background-color: {{ section.settings.bg_color }}; color: {{ section.settings.text_color }};">
+  <div class="explore-container">
+    
+    <!-- Page Header -->
+    <div class="explore-page-header" style="border-color: {{ section.settings.grid_border }};">
+      <span class="blueprint-tag" style="color: {{ section.settings.accent_color }};">
+        [ SYSTEM DIRECTORY // VAULT SECTORS ]
+      </span>
+      <h1 class="explore-page-title">
+        EXPLORE <span style="color: {{ section.settings.accent_color }};">COLLECTIONS</span>
+      </h1>
+      <p class="explore-page-subtitle">
+        SELECT A SECTOR TO ACCESS RESTRICTED ARTIFACT DEPLOYMENTS AND CLASSIFIED INVENTORY.
+      </p>
+    </div>
+
+    <!-- Collections Grid -->
+    <div class="blueprint-collection-grid">
+      {%- assign collections_to_display = collections -%}
+      
+      {%- if section.settings.collection_list != blank -%}
+        {%- assign collections_to_display = section.settings.collection_list -%}
+      {%- endif -%}
+
+      {%- for collection in collections_to_display -%}
+        <div class="brutalist-collection-card" style="border-color: {{ section.settings.grid_border }}; background: {{ section.settings.card_bg }};">
+          <a href="{{ collection.url }}" class="collection-card-link">
+            
+            <!-- Collection Image Architecture with Hover Swap / Zoom -->
+            <div class="collection-image-wrapper" style="border-color: {{ section.settings.grid_border }};">
+              {%- assign collection_image = collection.image | default: collection.products.first.featured_image -%}
+              {%- if collection_image != blank -%}
+                <img src="{{ collection_image | img_url: '800x' }}" alt="{{ collection.title | escape }}" class="primary-collection-image" loading="lazy">
+                
+                {%- if collection.products.size > 1 and collection.products[1].featured_image != blank -%}
+                  <img src="{{ collection.products[1].featured_image | img_url: '800x' }}" alt="{{ collection.title | escape }}" class="secondary-collection-image" loading="lazy">
+                {%- endif -%}
+              {%- else -%}
+                <div class="no-collection-img">[ NO SECTOR VISUAL ]</div>
+              {%- endif -%}
+              
+              <div class="sector-code" style="background: {{ section.settings.bg_color }}; color: {{ section.settings.accent_color }}; border-color: {{ section.settings.grid_border }};">
+                [ SEC-0{{ forloop.index }} ]
+              </div>
+            </div>
+
+            <!-- Collection Meta -->
+            <div class="collection-meta" style="border-color: {{ section.settings.grid_border }};">
+              <div class="collection-info">
+                <h3 class="collection-title" style="color: {{ section.settings.text_color }};">{{ collection.title }}</h3>
+                <span class="collection-count" style="color: {{ section.settings.accent_color }};">
+                  [{{ collection.products_count }} ARTIFACT{% if collection.products_count != 1 %}S{% endif %} AVAILABLE]
+                </span>
+              </div>
+              <span class="access-arrow" style="color: {{ section.settings.accent_color }};">&rarr;</span>
+            </div>
+
+          </a>
+        </div>
+      {%- endfor -%}
+    </div>
+
+  </div>
+</div>
+
+<style>
+  .explore-terminal-architecture {
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
+    max-width: 100vw;
+    box-sizing: border-box;
+    padding: 80px 40px 120px;
+    min-height: 80vh;
+  }
+  .explore-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 50px;
+  }
+  .explore-page-header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-bottom: 1px solid;
+    padding-bottom: 24px;
+  }
+  .blueprint-tag {
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+  }
+  .explore-page-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 0;
+    line-height: 1.1;
+  }
+  .explore-page-subtitle {
+    font-family: monospace;
+    font-size: 13px;
+    color: #888888;
+    max-width: 600px;
+    margin: 0;
+    letter-spacing: 0.05em;
+  }
+
+  /* Collections Grid */
+  .blueprint-collection-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+  }
+  .brutalist-collection-card {
+    border: 1px solid;
+    transition: border-color 0.3s ease;
+  }
+  .brutalist-collection-card:hover {
+    border-color: {{ section.settings.accent_color }};
+  }
+  .collection-card-link {
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .collection-image-wrapper {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: #141414;
+    border-bottom: 1px solid;
+    padding: 30px;
+    box-sizing: border-box;
+  }
+  .primary-collection-image, .secondary-collection-image {
+    width: calc(100% - 60px);
+    height: calc(100% - 60px);
+    object-fit: contain;
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    transition: opacity 0.4s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .secondary-collection-image {
+    opacity: 0;
+  }
+  .collection-card-link:hover .secondary-collection-image {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  .collection-card-link:hover .primary-collection-image {
+    opacity: 0;
+  }
+  .no-collection-img {
+    font-family: monospace;
+    font-size: 11px;
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+  }
+  .sector-code {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border: 1px solid;
+    letter-spacing: 0.1em;
+    z-index: 2;
+  }
+  .collection-meta {
+    padding: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .collection-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .collection-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 0;
+    letter-spacing: 0.05em;
+  }
+  .collection-count {
+    font-family: monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  .access-arrow {
+    font-family: monospace;
+    font-size: 24px;
+    font-weight: 700;
+    transition: transform 0.2s ease;
+  }
+  .collection-card-link:hover .access-arrow {
+    transform: translateX(6px);
+  }
+
+  @media (max-width: 1024px) {
+    .blueprint-collection-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 640px) {
+    .explore-terminal-architecture {
+      padding: 40px 16px;
+    }
+    .collection-image-wrapper {
+      aspect-ratio: 4 / 3;
+      padding: 20px;
+    }
+    .primary-collection-image, .secondary-collection-image {
+      width: calc(100% - 40px);
+      height: calc(100% - 40px);
+      top: 20px;
+      left: 20px;
+    }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Explore Collections",
+  "settings": [
+    {
+      "type": "collection_list",
+      "id": "collection_list",
+      "label": "Select Collections to Display",
+      "info": "Leave blank to display all store collections automatically."
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Background",
+      "default": "#0E0E0E"
+    },
+    {
+      "type": "color",
+      "id": "card_bg",
+      "label": "Card Background",
+      "default": "#0E0E0E"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#F5F5F5"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Gold Accent",
+      "default": "#D4AF37"
+    },
+    {
+      "type": "color",
+      "id": "grid_border",
+      "label": "Grid Border",
+      "default": "#222222"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Explore Collections"
+    }
+  ]
+}
+{% endschema %}

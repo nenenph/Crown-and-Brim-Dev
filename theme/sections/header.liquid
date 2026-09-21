@@ -1,9 +1,9 @@
 <!-- sections/header.liquid -->
 <header id="CrownHeader" style="background: transparent; border-bottom: none; padding: 22px 40px; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; box-sizing: border-box; transition: all 0.3s ease;">
-  <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto; position: relative;">
+  <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto; position: relative; width: 100%;">
     
     <!-- Left: Mobile Menu Trigger & Minimal Desktop Nav -->
-    <div style="display: flex; align-items: center; gap: 20px;">
+    <div style="display: flex; align-items: center; gap: 20px; z-index: 2;">
       <!-- Mobile Hamburger Button -->
       <button id="MobileMenuBtn" aria-label="Open Menu" style="background: none; border: none; color: #F5F5F5; cursor: pointer; display: none; padding: 0;" class="mobile-only-flex">
         <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
@@ -23,13 +23,13 @@
       </nav>
     </div>
 
-    <!-- Center: Brand Logo -->
-    <div style="text-align: center; position: absolute; left: 50%; transform: translateX(-50%);">
+    <!-- Center: Brand Logo (Strictly locked to absolute center) -->
+    <div style="text-align: center; position: absolute; left: 50%; transform: translateX(-50%); z-index: 1;">
       <a href="{{ routes.root_url }}" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">
         {% if section.settings.logo_image != blank %}
           <img src="{{ section.settings.logo_image | image_url: width: 200 }}" alt="{{ shop.name }}" style="max-height: {{ section.settings.logo_height }}px; width: auto; display: block;">
         {% else %}
-          <span style="color: #F5F5F5; font-family: 'Oswald', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase;">
+          <span style="color: #F5F5F5; font-family: 'Oswald', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; white-space: nowrap;">
             {{ shop.name | default: "CROWN & BRIM CO." }}
           </span>
         {% endif %}
@@ -37,7 +37,7 @@
     </div>
 
     <!-- Right: Utility Icons -->
-    <div style="display: flex; align-items: center; gap: 20px;">
+    <div style="display: flex; align-items: center; gap: 20px; z-index: 2;">
       <a href="{{ routes.search_url }}" id="SearchModalTrigger" style="color: #F5F5F5; text-decoration: none; display: flex; align-items: center;" title="Search">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
       </a>
@@ -93,7 +93,8 @@
 </header>
 
 <style>
-  @media (max-width: 768px) {
+  /* Collapse menu into hamburger drawer at 1260px to prevent text crowding */
+  @media (max-width: 1260px) {
     .desktop-only-flex { display: none !important; }
     .mobile-only-flex { display: flex !important; }
   }

@@ -127,6 +127,71 @@
   </div>
 </div>
 
+<!-- Crown Matrix Terminal Modal Overlay -->
+<div id="CrownMatrixModal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(14, 14, 14, 0.94); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 10005; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.25s ease;">
+  <div style="width: 100%; max-width: 650px; margin: 20px; background: #0E0E0E; border: 1px solid {{ section.settings.grid_border }}; box-sizing: border-box; display: flex; flex-direction: column;">
+    
+    <!-- Modal Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid {{ section.settings.grid_border }}; background: #121212;">
+      <span style="font-family: monospace; font-size: 11px; color: {{ section.settings.accent_color }}; letter-spacing: 0.15em;">[ DIAGNOSTIC TOOL // CROWN MATRIX FITTED SIZING ]</span>
+      <button type="button" onclick="closeCrownMatrixModal()" style="background: none; border: none; color: #888; font-family: monospace; font-size: 12px; cursor: pointer; letter-spacing: 0.1em;" onmouseover="this.style.color='#F5F5F5'" onmouseout="this.style.color='#888'">[ CLOSE X ]</button>
+    </div>
+
+    <!-- Modal Body Content -->
+    <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px; max-height: 80vh; overflow-y: auto;">
+      
+      <!-- Input Group -->
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <label style="font-family: monospace; font-size: 11px; color: #888; letter-spacing: 0.1em;">HEAD CIRCUMFERENCE:</label>
+        <div style="display: flex; gap: 10px;">
+          <input type="number" id="ModalCmInput" placeholder="e.g. 58.7" min="50" max="66" step="0.1" style="flex: 1; background: #141414; border: 1px solid {{ section.settings.grid_border }}; color: {{ section.settings.text_color }}; padding: 14px 16px; font-family: monospace; font-size: 16px; outline: none;">
+          <select id="ModalCmUnit" style="background: #141414; border: 1px solid {{ section.settings.grid_border }}; color: {{ section.settings.text_color }}; padding: 14px 16px; font-family: monospace; font-size: 14px; outline: none; cursor: pointer;">
+            <option value="cm">CM</option>
+            <option value="in">INCHES</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Fit Preference -->
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <label style="font-family: monospace; font-size: 11px; color: #888; letter-spacing: 0.1em;">FIT PREFERENCE:</label>
+        <div style="display: flex; gap: 10px;">
+          <label style="flex: 1; font-family: monospace; font-size: 11px; padding: 10px; border: 1px solid {{ section.settings.grid_border }}; background: #141414; cursor: pointer; text-align: center; color: #aaa;">
+            <input type="radio" name="ModalCmFit" value="snug"> SNUG [-0.4cm]
+          </label>
+          <label style="flex: 1; font-family: monospace; font-size: 11px; padding: 10px; border: 1px solid {{ section.settings.grid_border }}; background: #141414; cursor: pointer; text-align: center; color: #aaa;">
+            <input type="radio" name="ModalCmFit" value="standard" checked> STANDARD [BALANCED]
+          </label>
+          <label style="flex: 1; font-family: monospace; font-size: 11px; padding: 10px; border: 1px solid {{ section.settings.grid_border }}; background: #141414; cursor: pointer; text-align: center; color: #aaa;">
+            <input type="radio" name="ModalCmFit" value="relaxed"> RELAXED [+0.4cm]
+          </label>
+        </div>
+      </div>
+
+      <button type="button" id="ModalCmCalculateBtn" style="background: {{ section.settings.accent_color }}; color: #0E0E0E; border: none; font-family: 'Oswald', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.1em; padding: 16px; cursor: pointer;">
+        [ RUN FITTED CROWN DIAGNOSTIC ]
+      </button>
+
+      <!-- Terminal Output Screen -->
+      <div id="ModalCmTerminalScreen" style="background: #0A0A0A; border: 1px solid {{ section.settings.grid_border }}; padding: 16px; font-family: monospace; font-size: 12px; min-height: 100px; display: flex; flex-direction: column; gap: 6px;">
+        <p style="margin: 0; color: #666;">[SYSTEM READY. AWAITING CRANIAL PARAMETERS...]</p>
+      </div>
+
+      <!-- Results Box -->
+      <div id="ModalCmResultBox" style="display: none; flex-direction: column; gap: 14px; background: #121212; border: 1px solid {{ section.settings.grid_border }}; padding: 20px;">
+        <div style="display: flex; justify-content: space-between; font-family: monospace; font-size: 13px;">
+          <span style="color: #888;">OPTIMAL FITTED SIZE:</span>
+          <span id="ModalCmResultSize" style="color: {{ section.settings.accent_color }}; font-weight: 700;">--</span>
+        </div>
+        <button type="button" onclick="applyCalculatedSize(document.getElementById('ModalCmResultSize').textContent)" style="background: transparent; border: 1px solid {{ section.settings.accent_color }}; color: {{ section.settings.accent_color }}; font-family: monospace; font-size: 12px; font-weight: 700; padding: 12px; cursor: pointer; letter-spacing: 0.1em;" onmouseover="this.style.background='rgba(212,175,55,0.1)'" onmouseout="this.style.background='transparent'">
+          [ SELECT THIS FITTED SIZE & APPLY TO PDP &rarr; ]
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <style>
   .pdp-architecture {
     width: 100vw;
@@ -134,7 +199,7 @@
     margin-right: calc(-50vw + 50%);
     max-width: 100vw;
     box-sizing: border-box;
-    padding: 60px 60px 60px 40px; /* Reduced top padding to remove excess white space */
+    padding: 60px 60px 60px 40px;
   }
   .pdp-container {
     max-width: 1400px;
@@ -151,7 +216,7 @@
   }
   .sticky-gallery-wrapper {
     position: sticky;
-    top: 40px; /* Balanced sticky anchor */
+    top: 40px;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -240,11 +305,11 @@
   }
   .sticky-info-wrapper {
     position: sticky;
-    top: 40px; /* Perfectly synchronized with the left gallery sticky anchor */
+    top: 40px;
     display: flex;
     flex-direction: column;
     gap: 20px;
-    padding-top: 52px; /* Aligned visually with the gallery's top back-icon button */
+    padding-top: 52px;
   }
   .product-header-meta {
     display: flex;
@@ -408,6 +473,11 @@
     display: block;
   }
 
+  /* Modal Open State */
+  #CrownMatrixModal.open {
+    opacity: 1 !important;
+  }
+
   /* Responsive */
   @media (max-width: 1024px) {
     .pdp-container {
@@ -468,8 +538,123 @@
     }
   }
 
+  /* Crown Matrix Modal Controllers */
   function openCrownMatrixModal() {
-    alert("Crown Matrix Sizing Calculator will launch here (Day 3 Standout Feature).");
+    const modal = document.getElementById('CrownMatrixModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      void modal.offsetWidth;
+      modal.classList.add('open');
+      const input = document.getElementById('ModalCmInput');
+      if (input) input.focus();
+    }
+  }
+
+  function closeCrownMatrixModal() {
+    const modal = document.getElementById('CrownMatrixModal');
+    if (modal) {
+      modal.classList.remove('open');
+      setTimeout(() => {
+        modal.style.display = 'none';
+      }, 250);
+    }
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeCrownMatrixModal();
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const calcBtn = document.getElementById('ModalCmCalculateBtn');
+    if (!calcBtn) return;
+
+    calcBtn.addEventListener('click', () => {
+      const inputVal = parseFloat(document.getElementById('ModalCmInput').value);
+      const unit = document.getElementById('ModalCmUnit').value;
+      const fitPref = document.querySelector('input[name="ModalCmFit"]:checked').value;
+      const terminalScreen = document.getElementById('ModalCmTerminalScreen');
+      const resultBox = document.getElementById('ModalCmResultBox');
+      
+      if (isNaN(inputVal) || inputVal <= 0) {
+        alert('PLEASE ENTER A VALID CRANIUM MEASUREMENT.');
+        return;
+      }
+
+      let cmVal = unit === 'in' ? inputVal * 2.54 : inputVal;
+
+      // Adjust cm value based on fit preference
+      if (fitPref === 'snug') cmVal -= 0.4;
+      if (fitPref === 'relaxed') cmVal += 0.4;
+
+      terminalScreen.innerHTML = '';
+      resultBox.style.display = 'none';
+
+      const logs = [
+        `> INITIALIZING FITTED MATRIX PROTOCOL v3.0...`,
+        `> PARSING: ${inputVal}${unit} [${fitPref.toUpperCase()} FIT ADJUSTMENT]`,
+        `> CALCULATING 59FIFTY CRANIAL TOLERANCES...`,
+        `> MATCHING VAULT FITTED SIZE INDEX...`
+      ];
+
+      let delay = 0;
+      logs.forEach((log, index) => {
+        setTimeout(() => {
+          const p = document.createElement('p');
+          p.className = 'cm-log-line';
+          p.style.color = index === logs.length - 1 ? '{{ section.settings.accent_color }}' : '#aaa';
+          p.textContent = log;
+          terminalScreen.appendChild(p);
+          terminalScreen.scrollTop = terminalScreen.scrollHeight;
+        }, delay);
+        delay += 300;
+      });
+
+      setTimeout(() => {
+        // Fitted Hat Sizing Thresholds (cm to Hat Size)
+        let matchedSize = '7 1/4';
+
+        if (cmVal < 55.5) {
+          matchedSize = '7';
+        } else if (cmVal >= 55.5 && cmVal < 56.5) {
+          matchedSize = '7 1/8';
+        } else if (cmVal >= 56.5 && cmVal < 57.5) {
+          matchedSize = '7 1/4';
+        } else if (cmVal >= 57.5 && cmVal < 58.5) {
+          matchedSize = '7 3/8';
+        } else if (cmVal >= 58.5 && cmVal < 59.5) {
+          matchedSize = '7 1/2';
+        } else if (cmVal >= 59.5 && cmVal < 60.5) {
+          matchedSize = '7 5/8';
+        } else if (cmVal >= 60.5 && cmVal < 62.0) {
+          matchedSize = '7 3/4';
+        } else {
+          matchedSize = '8';
+        }
+
+        document.getElementById('ModalCmResultSize').textContent = matchedSize;
+        resultBox.style.display = 'flex';
+      }, delay + 100);
+    });
+  });
+
+  function applyCalculatedSize(sizeText) {
+    const sizeButtons = document.querySelectorAll('.size-matrix-btn');
+    let matched = false;
+    
+    sizeButtons.forEach(btn => {
+      const btnLabel = btn.getAttribute('data-size-label').trim();
+      if (btnLabel === sizeText && !btn.disabled) {
+        selectVariant(btn);
+        matched = true;
+      }
+    });
+
+    if (matched) {
+      closeCrownMatrixModal();
+    } else {
+      alert(`Calculated fitted size is ${sizeText}, but exact variant might be sold out or unavailable.`);
+      closeCrownMatrixModal();
+    }
   }
 </script>
 

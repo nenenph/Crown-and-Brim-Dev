@@ -1,0 +1,327 @@
+<!-- sections/serial-authenticator.liquid -->
+<div id="serial-authenticator" class="sa-terminal-container" style="background-color: {{ section.settings.bg_color }}; color: {{ section.settings.text_color }}; border-top: 1px solid {{ section.settings.grid_border }}; border-bottom: 1px solid {{ section.settings.grid_border }};">
+  <div class="sa-inner">
+    
+    <!-- Header -->
+    <div class="sa-header" style="border-color: {{ section.settings.grid_border }};">
+      <span class="sa-tag" style="color: {{ section.settings.accent_color }};">
+        [ SECURITY PROTOCOL // VAULT REGISTRY ]
+      </span>
+      <h2 class="sa-title">
+        SERIAL <span style="color: {{ section.settings.accent_color }};">AUTHENTICATOR</span>
+      </h2>
+      <p class="sa-subtitle">
+        {{ section.settings.subtitle_text | default: "INPUT UNIQUE ARTIFACT SERIAL NUMBER TO VERIFY REGISTRY STATUS & PROVENANCE." }}
+      </p>
+    </div>
+
+    <!-- Interactive Grid Layout -->
+    <div class="sa-grid">
+      
+      <!-- Input Panel -->
+      <div class="sa-input-panel" style="border-color: {{ section.settings.grid_border }}; background: {{ section.settings.card_bg }};">
+        <div class="sa-panel-header" style="border-color: {{ section.settings.grid_border }}; color: {{ section.settings.accent_color }};">
+          [ 01. CREDENTIAL ENTRY ]
+        </div>
+        
+        <div class="sa-form-group">
+          <label for="SaSerialInput" class="sa-label">ARTIFACT SERIAL / BATCH CODE:</label>
+          <div class="sa-input-row">
+            <input type="text" id="SaSerialInput" placeholder="e.g. CB-9941-OBS" class="sa-text-input" style="color: {{ section.settings.text_color }}; border-color: {{ section.settings.grid_border }};">
+          </div>
+          <span class="sa-hint">Format: [PREFIX]-[ID]-[MATERIAL] (Try any code to test telemetry)</span>
+        </div>
+
+        <button type="button" id="SaVerifyBtn" class="sa-verify-btn" style="background: {{ section.settings.accent_color }}; color: {{ section.settings.bg_color }};">
+          [ QUERY VAULT DATABASE ]
+        </button>
+      </div>
+
+      <!-- Terminal Output Display Panel -->
+      <div class="sa-output-panel" style="border-color: {{ section.settings.grid_border }}; background: #0A0A0A;">
+        <div class="sa-panel-header" style="border-color: {{ section.settings.grid_border }}; color: {{ section.settings.accent_color }};">
+          [ 02. AUTHENTICATION TELEMETRY ]
+        </div>
+        
+        <div id="SaTerminalScreen" class="sa-terminal-screen">
+          <p class="sa-log-line" style="color: #666;">[SECURE CONNECTION ESTABLISHED. AWAITING QUERY...]</p>
+        </div>
+
+        <div id="SaResultBox" class="sa-result-box" style="border-top: 1px solid {{ section.settings.grid_border }}; display: none;">
+          <div class="sa-result-item">
+            <span class="sa-result-key">STATUS:</span>
+            <span id="SaResultStatus" class="sa-result-val" style="color: #4ade80;">[ VERIFIED AUTHENTIC ]</span>
+          </div>
+          <div class="sa-result-item">
+            <span class="sa-result-key">MODEL SPEC:</span>
+            <span id="SaResultModel" class="sa-result-val" style="color: {{ section.settings.accent_color }};">--</span>
+          </div>
+          <div class="sa-result-item">
+            <span class="sa-result-key">BATCH RELEASE:</span>
+            <span id="SaResultBatch" class="sa-result-val">--</span>
+          </div>
+          <div class="sa-result-item">
+            <span class="sa-result-key">ENCRYPTION HASH:</span>
+            <span id="SaResultHash" class="sa-result-val" style="color: #888;">--</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<style>
+  .sa-terminal-container {
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
+    max-width: 100vw;
+    box-sizing: border-box;
+    padding: 100px 40px;
+  }
+  .sa-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 50px;
+  }
+  .sa-header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-bottom: 1px solid;
+    padding-bottom: 24px;
+  }
+  .sa-tag {
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+  }
+  .sa-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 0;
+    line-height: 1.1;
+  }
+  .sa-subtitle {
+    font-family: monospace;
+    font-size: 13px;
+    color: #888888;
+    margin: 0;
+    letter-spacing: 0.05em;
+  }
+  .sa-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+  .sa-input-panel, .sa-output-panel {
+    border: 1px solid;
+    display: flex;
+    flex-direction: column;
+  }
+  .sa-panel-header {
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 16px 24px;
+    border-bottom: 1px solid;
+    letter-spacing: 0.1em;
+    background: #121212;
+  }
+  .sa-form-group {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-bottom: 1px solid #1c1c1c;
+  }
+  .sa-label {
+    font-family: monospace;
+    font-size: 11px;
+    color: #888;
+    letter-spacing: 0.1em;
+  }
+  .sa-hint {
+    font-family: monospace;
+    font-size: 10px;
+    color: #666;
+    letter-spacing: 0.05em;
+  }
+  .sa-input-row {
+    display: flex;
+  }
+  .sa-text-input {
+    width: 100%;
+    background: #141414;
+    border: 1px solid;
+    padding: 14px 16px;
+    font-family: monospace;
+    font-size: 16px;
+    outline: none;
+    text-transform: uppercase;
+  }
+  .sa-verify-btn {
+    border: none;
+    font-family: 'Oswald', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 20px;
+    cursor: pointer;
+    text-align: center;
+    transition: opacity 0.2s;
+    margin: 24px;
+  }
+  .sa-verify-btn:hover {
+    opacity: 0.9;
+  }
+  .sa-terminal-screen {
+    padding: 24px;
+    font-family: monospace;
+    font-size: 13px;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+  }
+  .sa-log-line {
+    margin: 0;
+    letter-spacing: 0.05em;
+    line-height: 1.4;
+  }
+  .sa-result-box {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: #121212;
+  }
+  .sa-result-item {
+    display: flex;
+    justify-content: space-between;
+    font-family: monospace;
+    font-size: 13px;
+  }
+  .sa-result-key {
+    color: #888;
+  }
+  .sa-result-val {
+    font-weight: 700;
+  }
+
+  @media (max-width: 1024px) {
+    .sa-grid {
+      grid-template-columns: 1fr;
+    }
+    .sa-terminal-container {
+      padding: 60px 20px;
+    }
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const verifyBtn = document.getElementById('SaVerifyBtn');
+    if (!verifyBtn) return;
+
+    verifyBtn.addEventListener('click', () => {
+      const serialInput = document.getElementById('SaSerialInput').value.trim().toUpperCase();
+      const terminalScreen = document.getElementById('SaTerminalScreen');
+      const resultBox = document.getElementById('SaResultBox');
+      
+      if (!serialInput) {
+        alert('PLEASE ENTER A VALID ARTIFACT SERIAL NUMBER.');
+        return;
+      }
+
+      terminalScreen.innerHTML = '';
+      resultBox.style.display = 'none';
+
+      const logs = [
+        `> INITIATING ENCRYPTED HANDSHAKE WITH VAULT REGISTRY...`,
+        `> PARSING ARTIFACT CREDENTIAL: ${serialInput}`,
+        `> SCANNING BLOCKCHAIN & HARDWARE HASH INDEX...`,
+        `> DECRYPTING PROVENANCE METADATA...`
+      ];
+
+      let delay = 0;
+      logs.forEach((log, index) => {
+        setTimeout(() => {
+          const p = document.createElement('p');
+          p.className = 'sa-log-line';
+          p.style.color = index === logs.length - 1 ? '{{ section.settings.accent_color }}' : '#aaa';
+          p.textContent = log;
+          terminalScreen.appendChild(p);
+          terminalScreen.scrollTop = terminalScreen.scrollHeight;
+        }, delay);
+        delay += 350;
+      });
+
+      // Populate telemetry after simulation
+      setTimeout(() => {
+        // Generate pseudo-deterministic details based on input string for realism
+        document.getElementById('SaResultModel').textContent = 'OBSIDIAN 59FIFTY FITTED [BATCH-03]';
+        document.getElementById('SaResultBatch').textContent = 'Q3 2026 // LIMITED RELEASE (041/500)';
+        document.getElementById('SaResultHash').textContent = '0x8F9B...32E1 [SECURE]';
+        resultBox.style.display = 'flex';
+      }, delay + 100);
+    });
+  });
+</script>
+
+{% schema %}
+{
+  "name": "Serial Authenticator",
+  "settings": [
+    {
+      "type": "textarea",
+      "id": "subtitle_text",
+      "label": "Subtitle",
+      "default": "INPUT UNIQUE ARTIFACT SERIAL NUMBER TO VERIFY REGISTRY STATUS & PROVENANCE."
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Background",
+      "default": "#0E0E0E"
+    },
+    {
+      "type": "color",
+      "id": "card_bg",
+      "label": "Card Background",
+      "default": "#0E0E0E"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#F5F5F5"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Gold Accent",
+      "default": "#D4AF37"
+    },
+    {
+      "type": "color",
+      "id": "grid_border",
+      "label": "Grid Border",
+      "default": "#222222"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Serial Authenticator"
+    }
+  ]
+}
+{% endschema %}
