@@ -1,11 +1,22 @@
-import { PrismaClient } from "@prisma/client";
+// app/db.server.js
+import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
+import * as schema from "./db/schema";
 
-if (process.env.NODE_ENV !== "production") {
-  if (!global.prismaGlobal) {
-    global.prismaGlobal = new PrismaClient();
-  }
+let pool;
+
+if (!global.__db_pool__) {
+  global.__db_pool__ = mysql.createPool({
+    uri: process.env.DATABASE_URL,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+  });
 }
 
-const prisma = global.prismaGlobal ?? new PrismaClient();
+pool = global.__db_pool__;
 
-export default prisma;
+// Export the Drizzle client with the schema loaded for relational queries
+const db = drizzle(pool, { schema, mode: "default" });
+
+export default db;

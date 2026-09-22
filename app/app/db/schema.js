@@ -1,43 +1,44 @@
-import { mysqlTable, varchar, int, timestamp, serial, text, mysqlEnum } from "drizzle-orm/mysql-core";
+// app/db/schema.js
+import { mysqlTable, varchar, timestamp, int } from "drizzle-orm/mysql-core";
+import { relations } from "drizzle-orm";
 
-// 1. Connected Shopify Shops
-export const shops = mysqlTable("shops", {
-  id: serial("id").primaryKey(),
-  shopifyDomain: varchar("shopify_domain", { length: 255 }).notNull().unique(),
-  accessToken: varchar("access_token", { length: 255 }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+// 1. Products Table
+export const products = mysqlTable("products", {
+  id: varchar("id", { length: 36 }).primaryKey(), // UUID
+  title: varchar("title", { length: 255 }).notNull(),
+  sku: varchar("sku", { length: 100 }).unique(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-// 2. Vault Inventory & Serial Artifacts
-export const serialArtifacts = mysqlTable("serial_artifacts", {
-  id: serial("id").primaryKey(),
-  shopId: int("shop_id").notNull(),
-  serialCode: varchar("serial_code", { length: 100 }).notNull().unique(),
-  productName: varchar("product_name", { length: 255 }).notNull(),
-  status: mysqlEnum("status", ["active", "revoked", "pending"]).default("active").notNull(),
-  collectorTier: varchar("collector_tier", { length: 50 }).default("Standard").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+// 2. Serials Table
+export const serials = mysqlTable("serials", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  productId: varchar("product_id", { length: 36 }).references(() => products.id),
+  serialNumber: varchar("serial_number", { length: 100 }).unique().notNull(),
+  batchRelease: varchar("batch_release", { length: 100 }),
+  encryptionHash: varchar("encryption_hash", { length: 255 }),
+  status: varchar("status", { length: 50 }).default("ACTIVE"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-// 3. Vault Tier Rules
-export const vaultRules = mysqlTable("vault_rules", {
-  id: serial("id").primaryKey(),
-  shopId: int("shop_id").notNull(),
-  tierName: varchar("tier_name", { length: 50 }).notNull(),
-  minScore: int("min_score").notNull().default(0),
-  gatedTag: varchar("gated_tag", { length: 100 }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+// 3. Verification Logs Table (History/Log feature)
+export const verificationLogs = mysqlTable("verification_logs", {
+  id: int("id").primaryKey().autoincrement(),
+  serialId: varchar("serial_id", { length: 36 }).references(() => serials.id),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  statusReturned: varchar("status_returned", { length: 50 }),
+  scannedAt: timestamp("scanned_at").defaultNow(),
 });
 
-// 4. Customer Activity & Tier Access Logs
-export const activityLogs = mysqlTable("activity_logs", {
-  id: serial("id").primaryKey(),
-  shopId: int("shop_id").notNull(),
-  customerId: varchar("customer_id", { length: 100 }).notNull(),
-  customerEmail: varchar("customer_email", { length: 255 }),
-  calculatedScore: int("calculated_score").notNull().default(0),
-  actionTaken: varchar("action_taken", { length: 100 }).notNull(),
-  details: text("details"),
-  timestamp: timestamp("timestamp").defaultNow().notNull(),
-});
+// Define Relations for Drizzle Relational Queries
+export const productsRelations = relations(products, ({ many }) => ({
+  serials: many(serials),
+}));
+
+export const serialsRelations = relations(serials, ({ one, many }) => ({
+  product: one(products, {
+    fields: [serials.productId],
+    references: [products.id],
+  }),
+  logs: many(verificationLogs),
+}));

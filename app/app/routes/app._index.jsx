@@ -19,54 +19,66 @@ import {
   Box,
   Divider,
 } from "@shopify/polaris";
+import { authenticate } from "../shopify.server.js";
 import { db } from "../db/index";
-import { serialArtifacts, activityLogs } from "../db/schema";
+import { products, serials, verificationLogs } from "../db/schema";
 import { desc, eq } from "drizzle-orm";
 
 // ==========================================
 // 1. LOADER
 // ==========================================
-export async function loader() {
-  const defaultShopId = 1;
+export async function loader({ request }) {
+  const { session } = await authenticate.admin(request);
 
   try {
-    const serials = await db
-      .select()
-      .from(serialArtifacts)
-      .where(eq(serialArtifacts.shopId, defaultShopId))
-      .orderBy(desc(serialArtifacts.createdAt));
+    const [allSerials, logs] = await Promise.all([
+      db
+        .select({
+          id: serials.id,
+          serialCode: serials.serialNumber,
+          productName: products.title,
+          sku: products.sku,
+          collectorTier: serials.batchRelease, // Mapping batchRelease to tier display
+          status: serials.status,
+          createdAt: serials.createdAt,
+        })
+        .from(serials)
+        .leftJoin(products, eq(serials.productId, products.id))
+        .orderBy(desc(serials.createdAt))
+        .catch(() => []),
+      db
+        .select()
+        .from(verificationLogs)
+        .orderBy(desc(verificationLogs.scannedAt))
+        .limit(20)
+        .catch(() => []),
+    ]);
 
-    const logs = await db
-      .select()
-      .from(activityLogs)
-      .where(eq(activityLogs.shopId, defaultShopId))
-      .orderBy(desc(activityLogs.timestamp))
-      .limit(20);
-
-    const totalMinted = serials.length;
-    const activeSerials = serials.filter((s) => s.status === "active").length;
-    const revokedSerials = serials.filter((s) => s.status === "revoked").length;
+    const totalMinted = allSerials.length;
+    const activeSerials = allSerials.filter((s) => s.status === "ACTIVE").length;
+    const revokedSerials = allSerials.filter((s) => s.status === "REVOKED").length;
 
     const totalScans = logs.length;
-    const revokedAttempts = logs.filter((l) => l.actionTaken === "FLAGGED_REVOKED").length;
-    const rateLimitedAttempts = logs.filter((l) => l.actionTaken === "RATE_LIMITED_WARNING").length;
+    const securityThreats = logs.filter(
+      (l) => l.statusReturned === "SUSPICIOUS" || l.statusReturned === "INVALID"
+    ).length;
 
     return {
-      shopId: defaultShopId,
-      serials: serials || [],
+      shopDomain: session.shop,
+      serials: allSerials || [],
       logs: logs || [],
       metrics: {
         totalMinted,
         activeSerials,
         revokedSerials,
         totalScans,
-        securityThreats: revokedAttempts + rateLimitedAttempts,
+        securityThreats,
       },
     };
   } catch (error) {
     console.error("Dashboard loader error:", error);
     return {
-      shopId: defaultShopId,
+      shopDomain: session.shop,
       serials: [],
       logs: [],
       metrics: { totalMinted: 0, activeSerials: 0, revokedSerials: 0, totalScans: 0, securityThreats: 0 },
@@ -75,11 +87,66 @@ export async function loader() {
 }
 
 // ==========================================
-// 2. MAIN DASHBOARD COMPONENT
+// 2. ACTION
+// ==========================================
+export async function action({ request }) {
+  await authenticate.admin(request);
+  const body = await request.json().catch(() => ({}));
+  const { intent, serialCode, productName, collectorTier, status, id } = body;
+
+  try {
+    if (intent === "mint_serial") {
+      if (!serialCode || !productName) {
+        return Response.json(
+          { error: "Missing required fields: serialCode, productName" },
+          { status: 400 }
+        );
+      }
+
+      const productId = `p-${Date.now()}`;
+      await db.insert(products).values({
+        id: productId,
+        title: productName,
+        sku: `SKU-${Math.floor(Math.random() * 90000) + 10000}`,
+      });
+
+      await db.insert(serials).values({
+        id: `s-${Date.now()}`,
+        productId,
+        serialNumber: serialCode,
+        batchRelease: collectorTier || "Standard",
+        encryptionHash: crypto.randomUUID(),
+        status: "ACTIVE",
+      });
+
+      return Response.json({ success: true, message: "Serial artifact minted successfully." });
+    }
+
+    if (intent === "update_serial") {
+      if (!id) {
+        return Response.json({ error: "Missing serial record ID" }, { status: 400 });
+      }
+
+      await db
+        .update(serials)
+        .set({ status })
+        .where(eq(serials.id, id));
+
+      return Response.json({ success: true, message: "Serial status updated successfully." });
+    }
+
+    return Response.json({ error: "Invalid action intent" }, { status: 400 });
+  } catch (error) {
+    console.error("Vault Action Error:", error);
+    return Response.json({ error: "Internal server execution error" }, { status: 500 });
+  }
+}
+
+// ==========================================
+// 3. MAIN DASHBOARD COMPONENT
 // ==========================================
 export default function VaultDashboard() {
   const loaderData = useLoaderData();
-  const shopId = loaderData?.shopId ?? 1;
   const serials = loaderData?.serials ?? [];
   const logs = loaderData?.logs ?? [];
   const metrics = loaderData?.metrics ?? {
@@ -107,14 +174,13 @@ export default function VaultDashboard() {
 
   const handleMintSubmit = () => {
     fetcher.submit(
-      {
+      JSON.stringify({
         intent: "mint_serial",
-        shopId: String(shopId),
         serialCode,
         productName,
         collectorTier,
-      },
-      { method: "POST", action: "/app/vault", encType: "application/json" }
+      }),
+      { method: "POST", encType: "application/json" }
     );
     setSerialCode("");
     setProductName("");
@@ -123,14 +189,14 @@ export default function VaultDashboard() {
   };
 
   const handleStatusToggle = (id, currentStatus) => {
-    const newStatus = currentStatus === "active" ? "revoked" : "active";
+    const newStatus = currentStatus === "ACTIVE" ? "REVOKED" : "ACTIVE";
     fetcher.submit(
-      {
+      JSON.stringify({
         intent: "update_serial",
         id: String(id),
         status: newStatus,
-      },
-      { method: "POST", action: "/app/vault", encType: "application/json" }
+      }),
+      { method: "POST", encType: "application/json" }
     );
   };
 
@@ -138,10 +204,10 @@ export default function VaultDashboard() {
   const filteredSerials = serials.filter((s) => {
     const matchesSearch =
       s.serialCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.productName.toLowerCase().includes(searchQuery.toLowerCase());
+      (s.productName && s.productName.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    if (statusFilter === "active") return matchesSearch && s.status === "active";
-    if (statusFilter === "revoked") return matchesSearch && s.status === "revoked";
+    if (statusFilter === "active") return matchesSearch && s.status === "ACTIVE";
+    if (statusFilter === "revoked") return matchesSearch && s.status === "REVOKED";
     return matchesSearch;
   });
 
@@ -152,27 +218,25 @@ export default function VaultDashboard() {
 
   const renderStatusBadge = (status) => {
     switch (status) {
-      case "active":
+      case "ACTIVE":
         return <Badge tone="success">Active</Badge>;
-      case "revoked":
+      case "REVOKED":
         return <Badge tone="critical">Revoked</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
   };
 
-  const renderActionBadge = (actionTaken) => {
-    switch (actionTaken) {
-      case "ACCESS_GRANTED":
-        return <Badge tone="success">Authentic (+25)</Badge>;
-      case "FLAGGED_REVOKED":
-        return <Badge tone="critical">Compromised (-50)</Badge>;
-      case "RATE_LIMITED_WARNING":
-        return <Badge tone="warning">Throttled (+5)</Badge>;
-      case "INVALID_SCAN":
-        return <Badge tone="attention">Not Found (0)</Badge>;
+  const renderActionBadge = (statusReturned) => {
+    switch (statusReturned) {
+      case "VERIFIED":
+        return <Badge tone="success">Authentic</Badge>;
+      case "SUSPICIOUS":
+        return <Badge tone="critical">Compromised</Badge>;
+      case "INVALID":
+        return <Badge tone="attention">Not Found</Badge>;
       default:
-        return <Badge>{actionTaken}</Badge>;
+        return <Badge>{statusReturned}</Badge>;
     }
   };
 
@@ -201,11 +265,11 @@ export default function VaultDashboard() {
       </IndexTable.Cell>
       <IndexTable.Cell>
         <Text variant="bodySm" truncate>
-          {productName}
+          {productName || "—"}
         </Text>
       </IndexTable.Cell>
       <IndexTable.Cell>
-        <Badge tone="info">{collectorTier}</Badge>
+        <Badge tone="info">{collectorTier || "Standard"}</Badge>
       </IndexTable.Cell>
       <IndexTable.Cell>{renderStatusBadge(status)}</IndexTable.Cell>
       <IndexTable.Cell>
@@ -216,10 +280,10 @@ export default function VaultDashboard() {
       <IndexTable.Cell>
         <Button
           size="slim"
-          tone={status === "active" ? "critical" : undefined}
+          tone={status === "ACTIVE" ? "critical" : undefined}
           onClick={() => handleStatusToggle(id, status)}
         >
-          {status === "active" ? "Revoke Tag" : "Reinstate Tag"}
+          {status === "ACTIVE" ? "Revoke Tag" : "Reinstate Tag"}
         </Button>
       </IndexTable.Cell>
     </IndexTable.Row>
@@ -228,7 +292,7 @@ export default function VaultDashboard() {
   return (
     <Page
       title="Crown & Brim Co. // Vault Authenticator"
-      subtitle="Exclusivity Protection & Security Telemetry"
+      subtitle={`Connected Shop: ${loaderData?.shopDomain || "Admin Session"}`}
       compactTitle
       primaryAction={{
         content: "Mint Serial",
@@ -291,7 +355,7 @@ export default function VaultDashboard() {
         {metrics.securityThreats > 0 && (
           <Banner title="Suspicious Verification Activity" tone="warning">
             <p>
-              The Vault Risk Engine detected {metrics.securityThreats} high-frequency or compromised lookups.
+              The Vault Risk Engine detected {metrics.securityThreats} flagged or invalid verification attempts.
             </p>
           </Banner>
         )}
@@ -387,7 +451,7 @@ export default function VaultDashboard() {
                 <BlockStack gap="300">
                   <InlineStack align="space-between" blockAlign="center">
                     <Text variant="bodyMd" fontWeight="bold">
-                      Real-Time Telemetry Log
+                      Real-Time Verification Logs
                     </Text>
                     <Text variant="bodyXs" tone="subdued">
                       Showing last 20 events
@@ -408,13 +472,13 @@ export default function VaultDashboard() {
                           <BlockStack gap="050">
                             <InlineStack align="space-between" blockAlign="center">
                               <Text variant="bodySm" fontWeight="bold">
-                                {log.customerId || "Guest Terminal"}
+                                IP: {log.ipAddress || "127.0.0.1"}
                               </Text>
-                              {renderActionBadge(log.actionTaken)}
+                              {renderActionBadge(log.statusReturned)}
                             </InlineStack>
-                            <Text variant="bodyXs">{log.details}</Text>
+                            <Text variant="bodyXs">Serial ID: {log.serialId}</Text>
                             <Text variant="bodyXs" tone="subdued">
-                              {log.timestamp ? new Date(log.timestamp).toLocaleString() : "N/A"}
+                              {log.scannedAt ? new Date(log.scannedAt).toLocaleString() : "N/A"}
                             </Text>
                           </BlockStack>
                         </Box>

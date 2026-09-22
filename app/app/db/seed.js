@@ -1,93 +1,80 @@
-import process from "node:process";
-import { db } from "./index.js";
-import { shops, serialArtifacts, vaultRules, activityLogs } from "./schema.js";
+// app/db/seed.js
+import "dotenv/config";
+import process from "node:process"; // Explicit import resolves 'process is not defined'
+import mysql from "mysql2/promise";
+import { drizzle } from "drizzle-orm/mysql2";
+import * as schema from "./schema.js";
+
+const databaseUrl = process.env.DATABASE_URL || "mysql://root:password@127.0.0.1:3306/vault_engine";
+
+const pool = mysql.createPool({
+  uri: databaseUrl,
+});
+
+const db = drizzle(pool, { schema, mode: "default" });
 
 async function seed() {
-  console.log("🌱 Seeding MySQL database with mock Crown Matrix data...");
+  console.log("🌱 Seeding MySQL database with Crown & Brim Vault data...");
 
-  // 1. Clear existing test data (logs & artifacts first to respect relationships)
-  await db.delete(activityLogs);
-  await db.delete(vaultRules);
-  await db.delete(serialArtifacts);
-  await db.delete(shops);
+  // Clear existing test data respecting FK constraints
+  await db.delete(schema.verificationLogs);
+  await db.delete(schema.serials);
+  await db.delete(schema.products);
 
-  // 2. Insert Dummy Connected Shop
-  const [shopResult] = await db
-    .insert(shops)
-    .values({
-      shopifyDomain: "crown-and-brim.myshopify.com",
-      accessToken: "shpat_test_token_12345",
-    })
-    .$returningId();
+  // 1. Insert Products
+  const prodFounder = "p-fedora-gold";
+  const prodSnapback = "p-snapback-vip";
+  const prodStrapback = "p-strapback-obsidian";
 
-  const shopId = shopResult?.id || 1;
+  await db.insert(schema.products).values([
+    { id: prodFounder, title: "Crown & Brim Gold Edition Fedora", sku: "CB-FED-GOLD" },
+    { id: prodSnapback, title: "Crown & Brim VIP Wool Snapback", sku: "CB-SNAP-VIP" },
+    { id: prodStrapback, title: "Classic Strapback - Obsidian", sku: "CB-STRAP-OBS" },
+  ]);
 
-  // 3. Insert Mock Serial Artifacts
-  await db.insert(serialArtifacts).values([
+  // 2. Insert Serials
+  const serial1Id = "s-001";
+  const serial2Id = "s-002";
+  const serial3Id = "s-003";
+
+  await db.insert(schema.serials).values([
     {
-      shopId,
-      serialCode: "CB-2026-FOUNDER-001",
-      productName: "Crown & Brim Gold Edition Snapback",
-      collectorTier: "Founder",
-      status: "active",
+      id: serial1Id,
+      productId: prodFounder,
+      serialNumber: "CB-2026-FOUNDER-001",
+      batchRelease: "Founder Edition Drop",
+      encryptionHash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      status: "ACTIVE",
     },
     {
-      shopId,
-      serialCode: "CB-2026-VIP-002",
-      productName: "Crown & Brim Wool Fedoras",
-      collectorTier: "VIP",
-      status: "active",
+      id: serial2Id,
+      productId: prodSnapback,
+      serialNumber: "CB-2026-VIP-002",
+      batchRelease: "VIP Release",
+      encryptionHash: "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb",
+      status: "ACTIVE",
     },
     {
-      shopId,
-      serialCode: "CB-2026-STD-003",
-      productName: "Classic Strapback - Obsidian",
-      collectorTier: "Standard",
-      status: "revoked",
+      id: serial3Id,
+      productId: prodStrapback,
+      serialNumber: "CB-2026-STD-003",
+      batchRelease: "Standard Release",
+      encryptionHash: "3f82084c7182285e683411b7d51b3f9d51f28b493774dd139a0665f8832a829f",
+      status: "REVOKED",
     },
   ]);
 
-  // 4. Insert Mock Vault Tier Rules
-  await db.insert(vaultRules).values([
+  // 3. Insert Verification Logs
+  await db.insert(schema.verificationLogs).values([
     {
-      shopId,
-      tierName: "Founder",
-      minScore: 500,
-      gatedTag: "vip-gold-collector",
+      serialId: serial1Id,
+      ipAddress: "192.168.1.1",
+      statusReturned: "VERIFIED",
     },
     {
-      shopId,
-      tierName: "VIP",
-      minScore: 200,
-      gatedTag: "vip-silver-collector",
-    },
-  ]);
-
-  // 5. Insert Mock Telemetry / Audit Activity Logs
-  await db.insert(activityLogs).values([
-    {
-      shopId,
-      customerId: "Terminal_Manila_01",
-      customerEmail: "collector1@example.com",
-      calculatedScore: 550,
-      actionTaken: "ACCESS_GRANTED",
-      details: "Serial CB-2026-FOUNDER-001 verified authentic via NFC scan.",
-    },
-    {
-      shopId,
-      customerId: "Terminal_Quezon_04",
-      customerEmail: "collector2@example.com",
-      calculatedScore: 0,
-      actionTaken: "FLAGGED_REVOKED",
-      details: "Attempted verification on revoked serial CB-2026-STD-003.",
-    },
-    {
-      shopId,
-      customerId: "Unknown_IP_192.168.1.45",
-      customerEmail: null,
-      calculatedScore: 0,
-      actionTaken: "RATE_LIMITED_WARNING",
-      details: "12 rapid verification attempts within 30 seconds.",
+      serialId: serial3Id,
+      ipAddress: "203.0.113.195",
+      statusReturned: "FLAGGED_REVOKED",
     },
   ]);
 

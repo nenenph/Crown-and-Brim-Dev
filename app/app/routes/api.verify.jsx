@@ -1,8 +1,9 @@
 // app/routes/api.verify.jsx
 import { json } from "react-router";
 import db from "../db.server";
+import { eq } from "drizzle-orm";
+import { serials, verificationLogs } from "../db/schema"; 
 
-// Handle preflight CORS requests
 export const options = () => {
   return new Response(null, {
     status: 204,
@@ -17,6 +18,7 @@ export const options = () => {
 export const loader = async ({ request }) => {
   const url = new URL(request.url);
   const serial = url.searchParams.get("serial")?.trim().toUpperCase();
+  const clientIp = request.headers.get("x-forwarded-for") || "unknown";
 
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -32,9 +34,12 @@ export const loader = async ({ request }) => {
   }
 
   try {
-    // Query Prisma DB (adjust model & field names to match your schema)
-    const record = await db.serial.findUnique({
-      where: { serialNumber: serial },
+    // 1. Drizzle Query: Find the serial and include related product
+    const record = await db.query.serials.findFirst({
+      where: eq(serials.serialNumber, serial),
+      with: {
+        product: true, 
+      },
     });
 
     if (!record) {
@@ -48,13 +53,20 @@ export const loader = async ({ request }) => {
       );
     }
 
+    // 2. Drizzle Insert: Log the verification scan to the database
+    await db.insert(verificationLogs).values({
+      serialId: record.id,
+      ipAddress: clientIp,
+      statusReturned: "VERIFIED",
+    });
+
     return json(
       {
         valid: true,
         status: "[ VERIFIED AUTHENTIC ]",
-        model: record.modelSpec || record.model,
-        batch: record.batchRelease || record.batch,
-        hash: record.encryptionHash || record.hash,
+        model: record.product?.title || "Unknown Model",
+        batch: record.batchRelease,
+        hash: record.encryptionHash,
       },
       { headers: corsHeaders }
     );

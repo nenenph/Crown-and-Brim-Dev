@@ -1,8 +1,8 @@
 import { useLoaderData, useFetcher } from "react-router";
 import { authenticate } from "../shopify.server.js";
 import { db } from "../db/index";
-import { serialArtifacts, activityLogs } from "../db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { products, serials, verificationLogs } from "../db/schema";
+import { eq, desc } from "drizzle-orm";
 
 // ==========================================
 // LOADER
@@ -10,55 +10,36 @@ import { eq, and, desc } from "drizzle-orm";
 export async function loader({ request }) {
   const { session } = await authenticate.admin(request);
 
-  const url = new URL(request.url);
-  const action = url.searchParams.get("action");
-  const shopIdParam = url.searchParams.get("shopId");
-  const shopId = shopIdParam ? Number(shopIdParam) : 1;
-
   try {
-    if (action === "serials") {
-      const items = await db
-        .select()
-        .from(serialArtifacts)
-        .where(eq(serialArtifacts.shopId, shopId));
-      return Response.json({ shopId, serials: items, logs: [] });
-    }
-
-    if (action === "logs") {
-      const logs = await db
-        .select()
-        .from(activityLogs)
-        .where(eq(activityLogs.shopId, shopId))
-        .orderBy(desc(activityLogs.timestamp))
-        .limit(50);
-      return Response.json({ shopId, serials: [], logs });
-    }
-
-    const [items, logs] = await Promise.all([
+    const [allSerials, logs] = await Promise.all([
       db
-        .select()
-        .from(serialArtifacts)
-        .where(eq(serialArtifacts.shopId, shopId))
+        .select({
+          id: serials.id,
+          serialNumber: serials.serialNumber,
+          batchRelease: serials.batchRelease,
+          status: serials.status,
+          productTitle: products.title,
+          sku: products.sku,
+        })
+        .from(serials)
+        .leftJoin(products, eq(serials.productId, products.id))
         .catch(() => []),
       db
         .select()
-        .from(activityLogs)
-        .where(eq(activityLogs.shopId, shopId))
-        .orderBy(desc(activityLogs.timestamp))
+        .from(verificationLogs)
+        .orderBy(desc(verificationLogs.scannedAt))
         .limit(50)
         .catch(() => []),
     ]);
 
     return Response.json({
-      shopId,
       shopDomain: session.shop,
-      serials: items || [],
+      serials: allSerials || [],
       logs: logs || [],
     });
   } catch (error) {
     console.error("Vault Loader Error:", error);
     return Response.json({
-      shopId,
       shopDomain: session.shop,
       serials: [],
       logs: [],
@@ -73,14 +54,13 @@ export async function action({ request }) {
   const body = await request.json().catch(() => ({}));
   const {
     intent,
-    shopId,
-    serialCode,
-    productName,
-    collectorTier,
+    serialNumber,
+    productTitle,
+    sku,
+    batchRelease,
     status,
-    customerId,
-    customerEmail,
     id,
+    ipAddress,
   } = body;
 
   if (intent === "mint_serial" || intent === "update_serial") {
@@ -89,19 +69,29 @@ export async function action({ request }) {
 
   try {
     if (intent === "mint_serial") {
-      if (!shopId || !serialCode || !productName) {
+      if (!serialNumber || !productTitle) {
         return Response.json(
-          { error: "Missing required fields: shopId, serialCode, productName" },
+          { error: "Missing required fields: serialNumber, productTitle" },
           { status: 400 }
         );
       }
 
-      await db.insert(serialArtifacts).values({
-        shopId: Number(shopId),
-        serialCode,
-        productName,
-        collectorTier: collectorTier || "Standard",
-        status: "active",
+      // 1. Create or ensure Product exists
+      const productId = `p-${Date.now()}`;
+      await db.insert(products).values({
+        id: productId,
+        title: productTitle,
+        sku: sku || `SKU-${Date.now()}`,
+      });
+
+      // 2. Insert Serial linked to Product
+      await db.insert(serials).values({
+        id: `s-${Date.now()}`,
+        productId,
+        serialNumber,
+        batchRelease: batchRelease || "Standard Drop",
+        encryptionHash: crypto.randomUUID(),
+        status: "ACTIVE",
       });
 
       return Response.json({
@@ -116,13 +106,12 @@ export async function action({ request }) {
       }
 
       await db
-        .update(serialArtifacts)
+        .update(serials)
         .set({
           ...(status && { status }),
-          ...(collectorTier && { collectorTier }),
-          ...(productName && { productName }),
+          ...(batchRelease && { batchRelease }),
         })
-        .where(eq(serialArtifacts.id, Number(id)));
+        .where(eq(serials.id, id));
 
       return Response.json({
         success: true,
@@ -131,72 +120,49 @@ export async function action({ request }) {
     }
 
     if (intent === "verify_serial") {
-      if (!shopId || !serialCode) {
+      if (!serialNumber) {
         return Response.json(
-          { error: "Missing shopId or serialCode parameters" },
+          { error: "Missing serialNumber parameter" },
           { status: 400 }
         );
       }
 
-      const [artifact] = await db
-        .select()
-        .from(serialArtifacts)
-        .where(
-          and(
-            eq(serialArtifacts.shopId, Number(shopId)),
-            eq(serialArtifacts.serialCode, serialCode)
-          )
-        )
+      const [serialRecord] = await db
+        .select({
+          id: serials.id,
+          serialNumber: serials.serialNumber,
+          status: serials.status,
+          productTitle: products.title,
+        })
+        .from(serials)
+        .leftJoin(products, eq(serials.productId, products.id))
+        .where(eq(serials.serialNumber, serialNumber))
         .limit(1);
 
-      let actionTaken = "ACCESS_GRANTED";
-      let calculatedScore = 25;
-      let details = "Authentic vault artifact verified successfully.";
+      let statusReturned = "VERIFIED";
+      let message = "Authentic vault artifact verified successfully.";
 
-      if (!artifact) {
-        actionTaken = "INVALID_SCAN";
-        calculatedScore = 0;
-        details = "Warning: Serial code does not exist in Crown & Brim registry.";
-      } else if (artifact.status === "revoked") {
-        actionTaken = "FLAGGED_REVOKED";
-        calculatedScore = -50;
-        details =
-          "Critical Security Alert: Attempted lookup on a revoked/compromised artifact.";
-      } else {
-        const recentLogs = await db
-          .select()
-          .from(activityLogs)
-          .where(
-            and(
-              eq(activityLogs.shopId, Number(shopId)),
-              eq(activityLogs.customerId, customerId || "anonymous")
-            )
-          );
-
-        if (recentLogs.length >= 5) {
-          actionTaken = "RATE_LIMITED_WARNING";
-          calculatedScore = 5;
-          details =
-            "Elevated verification frequency detected. Security throttling applied.";
-        }
+      if (!serialRecord) {
+        statusReturned = "INVALID";
+        message = "Warning: Serial code does not exist in registry.";
+      } else if (serialRecord.status === "REVOKED") {
+        statusReturned = "SUSPICIOUS";
+        message = "Alert: Attempted verification on a revoked/compromised serial.";
       }
 
-      await db.insert(activityLogs).values({
-        shopId: Number(shopId),
-        customerId: customerId || "guest_terminal",
-        customerEmail: customerEmail || null,
-        calculatedScore,
-        actionTaken,
-        details,
-      });
+      if (serialRecord) {
+        await db.insert(verificationLogs).values({
+          serialId: serialRecord.id,
+          ipAddress: ipAddress || "127.0.0.1",
+          statusReturned,
+        });
+      }
 
       return Response.json({
-        success: true,
-        actionTaken,
-        calculatedScore,
-        productName: artifact ? artifact.productName : null,
-        collectorTier: artifact ? artifact.collectorTier : null,
-        message: details,
+        success: statusReturned === "VERIFIED",
+        statusReturned,
+        productName: serialRecord ? serialRecord.productTitle : null,
+        message,
       });
     }
 
@@ -222,10 +188,10 @@ export default function VaultPage() {
     fetcher.submit(
       JSON.stringify({
         intent: "mint_serial",
-        shopId: data?.shopId || 1,
-        serialCode: formData.get("serialCode"),
-        productName: formData.get("productName"),
-        collectorTier: formData.get("collectorTier"),
+        serialNumber: formData.get("serialNumber"),
+        productTitle: formData.get("productTitle"),
+        sku: formData.get("sku"),
+        batchRelease: formData.get("batchRelease"),
       }),
       {
         method: "POST",
@@ -237,19 +203,25 @@ export default function VaultPage() {
   return (
     <div style={{ padding: "20px", fontFamily: "sans-serif" }}>
       <h1>Vault Admin Dashboard</h1>
-      <p>Connected Shop: <strong>{data?.shopDomain || "Admin Session"}</strong></p>
+      <p>
+        Connected Shop: <strong>{data?.shopDomain || "Admin Session"}</strong>
+      </p>
 
       <hr style={{ margin: "20px 0" }} />
 
       <h2>Mint New Serial Artifact</h2>
-      <form onSubmit={handleMintSubmit} style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-        <input name="serialCode" placeholder="Serial Code (e.g. CB-001)" required />
-        <input name="productName" placeholder="Product Name" required />
-        <select name="collectorTier">
-          <option value="Standard">Standard</option>
-          <option value="Gold">Gold</option>
-          <option value="Platinum">Platinum</option>
-        </select>
+      <form
+        onSubmit={handleMintSubmit}
+        style={{ display: "flex", gap: "10px", marginBottom: "20px" }}
+      >
+        <input
+          name="serialNumber"
+          placeholder="Serial Number (e.g. CB-VAULT-001)"
+          required
+        />
+        <input name="productTitle" placeholder="Product Title" required />
+        <input name="sku" placeholder="SKU (e.g. CB-FED-001)" />
+        <input name="batchRelease" placeholder="Batch / Drop Name" />
         <button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Minting..." : "Mint Serial"}
         </button>
@@ -264,13 +236,19 @@ export default function VaultPage() {
       <hr style={{ margin: "20px 0" }} />
 
       <h2>Serial Artifacts ({data?.serials?.length || 0})</h2>
-      <table width="100%" border="1" cellPadding="8" style={{ borderCollapse: "collapse" }}>
+      <table
+        width="100%"
+        border="1"
+        cellPadding="8"
+        style={{ borderCollapse: "collapse" }}
+      >
         <thead>
           <tr>
             <th>ID</th>
-            <th>Serial Code</th>
-            <th>Product Name</th>
-            <th>Collector Tier</th>
+            <th>Serial Number</th>
+            <th>Product Title</th>
+            <th>SKU</th>
+            <th>Batch Release</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -279,30 +257,34 @@ export default function VaultPage() {
             data.serials.map((item) => (
               <tr key={item.id}>
                 <td>{item.id}</td>
-                <td>{item.serialCode}</td>
-                <td>{item.productName}</td>
-                <td>{item.collectorTier}</td>
+                <td>{item.serialNumber}</td>
+                <td>{item.productTitle || "—"}</td>
+                <td>{item.sku || "—"}</td>
+                <td>{item.batchRelease || "—"}</td>
                 <td>{item.status}</td>
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan="5" align="center">No serial artifacts found.</td>
+              <td colSpan="6" align="center">
+                No serial artifacts found.
+              </td>
             </tr>
           )}
         </tbody>
       </table>
 
-      <h2 style={{ marginTop: "30px" }}>Recent Activity Logs</h2>
+      <h2 style={{ marginTop: "30px" }}>Recent Verification Scans</h2>
       <ul>
         {data?.logs?.length > 0 ? (
-          data.logs.map((log, index) => (
-            <li key={index}>
-              <strong>[{log.actionTaken}]</strong> - {log.details} (Score: {log.calculatedScore})
+          data.logs.map((log) => (
+            <li key={log.id}>
+              <strong>[{log.statusReturned}]</strong> — Scanned from IP:{" "}
+              {log.ipAddress} at {new Date(log.scannedAt).toLocaleString()}
             </li>
           ))
         ) : (
-          <li>No activity logs recorded.</li>
+          <li>No verification scans recorded yet.</li>
         )}
       </ul>
     </div>
