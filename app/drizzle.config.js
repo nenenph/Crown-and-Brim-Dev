@@ -1,8 +1,9 @@
-import { defineConfig } from "drizzle-kit";
 import "dotenv/config";
+import process from "node:process";
+import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
-  schema: "./app/db/schema.ts",
+  schema: "./app/db/schema.js", // Points to your pure JS schema
   out: "./drizzle",
   dialect: "mysql",
   dbCredentials: {

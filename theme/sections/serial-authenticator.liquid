@@ -232,47 +232,78 @@
     const verifyBtn = document.getElementById('SaVerifyBtn');
     if (!verifyBtn) return;
 
-    verifyBtn.addEventListener('click', () => {
+    // Replace with your app's public Cloudflare tunnel / app URL
+    // e.g. 'https://absent-toolbar-heading-knows.trycloudflare.com'
+    const APP_URL = 'https://terry-fits-retrieval-mac.trycloudflare.com'; 
+
+    verifyBtn.addEventListener('click', async () => {
       const serialInput = document.getElementById('SaSerialInput').value.trim().toUpperCase();
       const terminalScreen = document.getElementById('SaTerminalScreen');
       const resultBox = document.getElementById('SaResultBox');
-      
+      const statusEl = document.getElementById('SaResultStatus');
+      const modelEl = document.getElementById('SaResultModel');
+      const batchEl = document.getElementById('SaResultBatch');
+      const hashEl = document.getElementById('SaResultHash');
+
       if (!serialInput) {
         alert('PLEASE ENTER A VALID ARTIFACT SERIAL NUMBER.');
         return;
       }
 
+      // Reset output
       terminalScreen.innerHTML = '';
       resultBox.style.display = 'none';
+      verifyBtn.disabled = true;
+      verifyBtn.style.opacity = '0.5';
 
-      const logs = [
-        `> INITIATING ENCRYPTED HANDSHAKE WITH VAULT REGISTRY...`,
-        `> PARSING ARTIFACT CREDENTIAL: ${serialInput}`,
-        `> SCANNING BLOCKCHAIN & HARDWARE HASH INDEX...`,
-        `> DECRYPTING PROVENANCE METADATA...`
-      ];
+      const appendLog = (text, color = '#aaa') => {
+        const p = document.createElement('p');
+        p.className = 'sa-log-line';
+        p.style.color = color;
+        p.textContent = text;
+        terminalScreen.appendChild(p);
+        terminalScreen.scrollTop = terminalScreen.scrollHeight;
+      };
 
-      let delay = 0;
-      logs.forEach((log, index) => {
+      appendLog(`> INITIATING ENCRYPTED HANDSHAKE...`);
+      appendLog(`> PARSING ARTIFACT CREDENTIAL: ${serialInput}`);
+
+      try {
+        // Query the app backend
+        const response = await fetch(`${APP_URL}/api/verify?serial=${encodeURIComponent(serialInput)}`);
+        const data = await response.json();
+
+        appendLog(`> SCANNING BLOCKCHAIN & HARDWARE HASH INDEX...`);
+        appendLog(`> DECRYPTING PROVENANCE METADATA...`);
+
         setTimeout(() => {
-          const p = document.createElement('p');
-          p.className = 'sa-log-line';
-          p.style.color = index === logs.length - 1 ? '{{ section.settings.accent_color }}' : '#aaa';
-          p.textContent = log;
-          terminalScreen.appendChild(p);
-          terminalScreen.scrollTop = terminalScreen.scrollHeight;
-        }, delay);
-        delay += 350;
-      });
+          if (data.valid) {
+            appendLog(`> TELEMETRY RETRIEVED: MATCH CONFIRMED`, '{{ section.settings.accent_color }}');
+            statusEl.textContent = data.status;
+            statusEl.style.color = '#4ade80'; // Green
+            modelEl.textContent = data.model || '--';
+            batchEl.textContent = data.batch || '--';
+            hashEl.textContent = data.hash || '--';
+          } else {
+            appendLog(`> ALERT: REGISTRY MISMATCH DETECTED`, '#ef4444');
+            statusEl.textContent = data.status || '[ UNVERIFIED ]';
+            statusEl.style.color = '#ef4444'; // Red
+            modelEl.textContent = 'UNKNOWN ARTIFACT';
+            batchEl.textContent = 'UNAUTHORISED / INVALID';
+            hashEl.textContent = 'N/A';
+          }
 
-      // Populate telemetry after simulation
-      setTimeout(() => {
-        // Generate pseudo-deterministic details based on input string for realism
-        document.getElementById('SaResultModel').textContent = 'OBSIDIAN 59FIFTY FITTED [BATCH-03]';
-        document.getElementById('SaResultBatch').textContent = 'Q3 2026 // LIMITED RELEASE (041/500)';
-        document.getElementById('SaResultHash').textContent = '0x8F9B...32E1 [SECURE]';
-        resultBox.style.display = 'flex';
-      }, delay + 100);
+          resultBox.style.display = 'flex';
+          verifyBtn.disabled = false;
+          verifyBtn.style.opacity = '1';
+        }, 500);
+
+      } catch (err) {
+        console.error('Authentication fetch error:', err);
+        appendLog(`> ERROR: CONNECTION TO VAULT REGISTRY FAILED`, '#ef4444');
+        verifyBtn.disabled = false;
+        verifyBtn.style.opacity = '1';
+      }
     });
   });
 </script>
