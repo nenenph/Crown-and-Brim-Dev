@@ -1,8 +1,6 @@
 // app/routes/api.verify.jsx
-import { json } from "react-router";
-import db from "../db.server";
-import { eq } from "drizzle-orm";
-import { serials, verificationLogs } from "../db/schema"; 
+import db from "../db.server.js";
+import { verificationLogs } from "../db/schema.js"; 
 
 export const options = () => {
   return new Response(null, {
@@ -27,29 +25,29 @@ export const loader = async ({ request }) => {
   };
 
   if (!serial) {
-    return json(
-      { valid: false, message: "SERIAL NUMBER REQUIRED" },
+    return new Response(
+      JSON.stringify({ valid: false, message: "SERIAL NUMBER REQUIRED" }),
       { status: 400, headers: corsHeaders }
     );
   }
 
   try {
-    // 1. Drizzle Query: Find the serial and include related product
+    // 1. Drizzle Query: Use the callback syntax for rel-queries/db.query
     const record = await db.query.serials.findFirst({
-      where: eq(serials.serialNumber, serial),
+      where: (serialsTable, { eq }) => eq(serialsTable.serialNumber, serial),
       with: {
         product: true, 
       },
     });
 
     if (!record) {
-      return json(
-        {
+      return new Response(
+        JSON.stringify({
           valid: false,
           status: "[ INVALID / UNREGISTERED ]",
           message: "NO RECORD FOUND IN VAULT REGISTRY.",
-        },
-        { headers: corsHeaders }
+        }),
+        { status: 200, headers: corsHeaders }
       );
     }
 
@@ -60,20 +58,20 @@ export const loader = async ({ request }) => {
       statusReturned: "VERIFIED",
     });
 
-    return json(
-      {
+    return new Response(
+      JSON.stringify({
         valid: true,
         status: "[ VERIFIED AUTHENTIC ]",
         model: record.product?.title || "Unknown Model",
         batch: record.batchRelease,
         hash: record.encryptionHash,
-      },
-      { headers: corsHeaders }
+      }),
+      { status: 200, headers: corsHeaders }
     );
   } catch (error) {
     console.error("Error verifying serial:", error);
-    return json(
-      { valid: false, message: "SERVER ERROR QUERYING REGISTRY" },
+    return new Response(
+      JSON.stringify({ valid: false, message: "SERVER ERROR QUERYING REGISTRY" }),
       { status: 500, headers: corsHeaders }
     );
   }

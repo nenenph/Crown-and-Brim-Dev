@@ -25,10 +25,83 @@ import { products, serials, verificationLogs } from "../db/schema";
 import { desc, eq } from "drizzle-orm";
 
 // ==========================================
-// 1. LOADER
+// 1. LOADER & DYNAMIC TUNNEL SYNC
 // ==========================================
 export async function loader({ request }) {
-  const { session } = await authenticate.admin(request);
+  const { admin } = await authenticate.admin(request);
+
+  // Extract the current active tunnel host URL from incoming request headers
+  const url = new URL(request.url);
+  const currentAppUrl = `${url.protocol}//${url.host}`;
+
+  try {
+    // 1. Fetch the exact Shop GID and register/update the app_url metafield in parallel
+    const shopResponse = await admin.graphql(`
+      #graphql
+      query GetShopId {
+        shop {
+          id
+          myshopifyDomain
+        }
+      }
+    `);
+    const shopJson = await shopResponse.json();
+    const shopId = shopJson?.data?.shop?.id;
+
+    if (shopId) {
+      // Ensure the metafield definition exists for public storefront reading
+      await admin.graphql(
+        `#graphql
+        mutation CreateAppDataMetafield($definition: MetafieldDefinitionInput!) {
+          metafieldDefinitionCreate(definition: $definition) {
+            createdDefinition { id }
+            userErrors { field message }
+          }
+        }`,
+        {
+          variables: {
+            definition: {
+              name: "Vault App URL",
+              namespace: "custom",
+              key: "app_url",
+              description: "Dynamic tunnel URL for Vault Authenticator backend",
+              type: "url",
+              ownerType: "SHOP",
+              access: { storefront: "PUBLIC_READ" },
+            },
+          },
+        }
+      ).catch(() => {
+        // Definition likely already exists, proceed to update
+      });
+
+      // Automatically sync the active Cloudflare tunnel URL to shop metafields
+      await admin.graphql(
+        `#graphql
+        mutation UpdateShopMetafield($metafields: [MetafieldsSetInput!]!) {
+          metafieldsSet(metafields: $metafields) {
+            metafields { id value }
+            userErrors { field message }
+          }
+        }`,
+        {
+          variables: {
+            metafields: [
+              {
+                namespace: "custom",
+                key: "app_url",
+                type: "url",
+                ownerId: shopId,
+                value: currentAppUrl,
+              },
+            ],
+          },
+        }
+      );
+    }
+  } catch (error) {
+    console.error("Metafield sync execution error:", error);
+  }
 
   try {
     const [allSerials, logs] = await Promise.all([
@@ -38,7 +111,7 @@ export async function loader({ request }) {
           serialCode: serials.serialNumber,
           productName: products.title,
           sku: products.sku,
-          collectorTier: serials.batchRelease, // Mapping batchRelease to tier display
+          collectorTier: serials.batchRelease,
           status: serials.status,
           createdAt: serials.createdAt,
         })
@@ -64,7 +137,7 @@ export async function loader({ request }) {
     ).length;
 
     return {
-      shopDomain: session.shop,
+      appUrl: currentAppUrl,
       serials: allSerials || [],
       logs: logs || [],
       metrics: {
@@ -78,7 +151,7 @@ export async function loader({ request }) {
   } catch (error) {
     console.error("Dashboard loader error:", error);
     return {
-      shopDomain: session.shop,
+      appUrl: currentAppUrl,
       serials: [],
       logs: [],
       metrics: { totalMinted: 0, activeSerials: 0, revokedSerials: 0, totalScans: 0, securityThreats: 0 },
@@ -292,7 +365,7 @@ export default function VaultDashboard() {
   return (
     <Page
       title="Crown & Brim Co. // Vault Authenticator"
-      subtitle={`Connected Shop: ${loaderData?.shopDomain || "Admin Session"}`}
+      subtitle="Connected Admin Dashboard"
       compactTitle
       primaryAction={{
         content: "Mint Serial",

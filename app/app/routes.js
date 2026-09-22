@@ -7,8 +7,11 @@ export default [
   layout("routes/app.jsx", [
     route("app", "routes/app._index.jsx"),
     route("app/additional", "routes/app.additional.jsx"),
-    route("app/vault", "routes/app.vault.jsx"), // <-- ADD THIS LINE
+    route("app/vault", "routes/app.vault.jsx"),
   ]),
+
+  // API Routes
+  route("api/verify", "routes/api.verify.jsx"), // <-- ADD THIS LINE
 
   // Auth & Webhooks
   route("auth/*", "routes/auth.$.jsx"),

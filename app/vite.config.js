@@ -48,6 +48,7 @@ export default defineConfig({
   ssr: {
     // Uses regex to catch both `@shopify/polaris` and subpaths like `@shopify/polaris/build/styles.css`
     noExternal: [/^@shopify\/polaris/],
+    external: ["mysql2", "mysql2/promise"], // <-- ADD THIS LINE
   },
   plugins: [reactRouter(), tsconfigPaths()],
   build: {
