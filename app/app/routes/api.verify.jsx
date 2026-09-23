@@ -32,7 +32,7 @@ export const loader = async ({ request }) => {
   }
 
   try {
-    // 1. Drizzle Query: Use the callback syntax for rel-queries/db.query
+    // 1. Query the serial and its linked product relationship
     const record = await db.query.serials.findFirst({
       where: (serialsTable, { eq }) => eq(serialsTable.serialNumber, serial),
       with: {
@@ -51,20 +51,42 @@ export const loader = async ({ request }) => {
       );
     }
 
-    // 2. Drizzle Insert: Log the verification scan to the database
+    // 2. Check if serial has been revoked or flagged
+    if (record.status === "REVOKED") {
+      await db.insert(verificationLogs).values({
+        serialId: record.id,
+        ipAddress: clientIp,
+        statusReturned: "REVOKED_ATTEMPT",
+      });
+
+      return new Response(
+        JSON.stringify({
+          valid: false,
+          status: "[ WARNING: REVOKED / COMPROMISED ]",
+          message: "THIS SERIAL HAS BEEN REVOKED BY THE REGISTRY.",
+          model: record.product?.title || "Unassigned Model",
+          batch: record.batchRelease || "N/A",
+          hash: record.encryptionHash || "N/A",
+        }),
+        { status: 200, headers: corsHeaders }
+      );
+    }
+
+    // 3. Log successful verification scan
     await db.insert(verificationLogs).values({
       serialId: record.id,
       ipAddress: clientIp,
       statusReturned: "VERIFIED",
     });
 
+    // 4. Return valid authentic payload with actual database values
     return new Response(
       JSON.stringify({
         valid: true,
         status: "[ VERIFIED AUTHENTIC ]",
-        model: record.product?.title || "Unknown Model",
-        batch: record.batchRelease,
-        hash: record.encryptionHash,
+        model: record.product?.title || "Unassigned Model",
+        batch: record.batchRelease || "N/A",
+        hash: record.encryptionHash || "N/A",
       }),
       { status: 200, headers: corsHeaders }
     );

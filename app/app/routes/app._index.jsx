@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useLoaderData, useFetcher } from "react-router";
+import crypto from "node:crypto";
 import {
   Page,
   Card,
@@ -18,6 +19,7 @@ import {
   Tabs,
   Box,
   Divider,
+  Tooltip,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server.js";
 import { db } from "../db/index";
@@ -28,14 +30,13 @@ import { desc, eq } from "drizzle-orm";
 // 1. LOADER & DYNAMIC TUNNEL SYNC
 // ==========================================
 export async function loader({ request }) {
-  const { admin } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
 
   // Extract the current active tunnel host URL from incoming request headers
   const url = new URL(request.url);
   const currentAppUrl = `${url.protocol}//${url.host}`;
 
   try {
-    // 1. Fetch the exact Shop GID and register/update the app_url metafield in parallel
     const shopResponse = await admin.graphql(`
       #graphql
       query GetShopId {
@@ -49,7 +50,6 @@ export async function loader({ request }) {
     const shopId = shopJson?.data?.shop?.id;
 
     if (shopId) {
-      // Ensure the metafield definition exists for public storefront reading
       await admin.graphql(
         `#graphql
         mutation CreateAppDataMetafield($definition: MetafieldDefinitionInput!) {
@@ -71,11 +71,8 @@ export async function loader({ request }) {
             },
           },
         }
-      ).catch(() => {
-        // Definition likely already exists, proceed to update
-      });
+      ).catch(() => {});
 
-      // Automatically sync the active Cloudflare tunnel URL to shop metafields
       await admin.graphql(
         `#graphql
         mutation UpdateShopMetafield($metafields: [MetafieldsSetInput!]!) {
@@ -109,6 +106,7 @@ export async function loader({ request }) {
         .select({
           id: serials.id,
           serialCode: serials.serialNumber,
+          encryptionHash: serials.encryptionHash, // <-- EXPOSED ENCRYPTION HASH
           productName: products.title,
           sku: products.sku,
           collectorTier: serials.batchRelease,
@@ -137,6 +135,7 @@ export async function loader({ request }) {
     ).length;
 
     return {
+      shopDomain: session.shop,
       appUrl: currentAppUrl,
       serials: allSerials || [],
       logs: logs || [],
@@ -151,6 +150,7 @@ export async function loader({ request }) {
   } catch (error) {
     console.error("Dashboard loader error:", error);
     return {
+      shopDomain: session?.shop || "Admin",
       appUrl: currentAppUrl,
       serials: [],
       logs: [],
@@ -165,7 +165,7 @@ export async function loader({ request }) {
 export async function action({ request }) {
   await authenticate.admin(request);
   const body = await request.json().catch(() => ({}));
-  const { intent, serialCode, productName, collectorTier, status, id } = body;
+  const { intent, serialCode, productName, collectorTier, status, id, customHash } = body;
 
   try {
     if (intent === "mint_serial") {
@@ -183,12 +183,15 @@ export async function action({ request }) {
         sku: `SKU-${Math.floor(Math.random() * 90000) + 10000}`,
       });
 
+      // Use user-provided hash if available, otherwise generate a secure crypto UUID hash
+      const hashToStore = customHash && customHash.trim() !== "" ? customHash.trim() : crypto.randomUUID();
+
       await db.insert(serials).values({
         id: `s-${Date.now()}`,
         productId,
         serialNumber: serialCode,
         batchRelease: collectorTier || "Standard",
-        encryptionHash: crypto.randomUUID(),
+        encryptionHash: hashToStore,
         status: "ACTIVE",
       });
 
@@ -242,6 +245,7 @@ export default function VaultDashboard() {
   const [serialCode, setSerialCode] = useState("");
   const [productName, setProductName] = useState("");
   const [collectorTier, setCollectorTier] = useState("Standard");
+  const [customHash, setCustomHash] = useState("");
 
   const handleModalChange = useCallback(() => setModalActive((active) => !active), []);
 
@@ -252,12 +256,14 @@ export default function VaultDashboard() {
         serialCode,
         productName,
         collectorTier,
+        customHash,
       }),
       { method: "POST", encType: "application/json" }
     );
     setSerialCode("");
     setProductName("");
     setCollectorTier("Standard");
+    setCustomHash("");
     handleModalChange();
   };
 
@@ -273,10 +279,11 @@ export default function VaultDashboard() {
     );
   };
 
-  // Filter Serials based on search query and status filter
+  // Filter Serials based on search query, hash, and status filter
   const filteredSerials = serials.filter((s) => {
     const matchesSearch =
       s.serialCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (s.encryptionHash && s.encryptionHash.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (s.productName && s.productName.toLowerCase().includes(searchQuery.toLowerCase()));
 
     if (statusFilter === "active") return matchesSearch && s.status === "ACTIVE";
@@ -324,43 +331,54 @@ export default function VaultDashboard() {
     },
   ];
 
-  const rowMarkup = filteredSerials.map(({ id, serialCode, productName, collectorTier, status, createdAt }, index) => (
-    <IndexTable.Row
-      id={String(id)}
-      key={id}
-      selected={selectedResources.includes(String(id))}
-      position={index}
-    >
-      <IndexTable.Cell>
-        <Text variant="bodySm" fontWeight="bold">
-          {serialCode}
-        </Text>
-      </IndexTable.Cell>
-      <IndexTable.Cell>
-        <Text variant="bodySm" truncate>
-          {productName || "—"}
-        </Text>
-      </IndexTable.Cell>
-      <IndexTable.Cell>
-        <Badge tone="info">{collectorTier || "Standard"}</Badge>
-      </IndexTable.Cell>
-      <IndexTable.Cell>{renderStatusBadge(status)}</IndexTable.Cell>
-      <IndexTable.Cell>
-        <Text variant="bodyXs" tone="subdued">
-          {createdAt ? new Date(createdAt).toLocaleDateString() : "N/A"}
-        </Text>
-      </IndexTable.Cell>
-      <IndexTable.Cell>
-        <Button
-          size="slim"
-          tone={status === "ACTIVE" ? "critical" : undefined}
-          onClick={() => handleStatusToggle(id, status)}
-        >
-          {status === "ACTIVE" ? "Revoke Tag" : "Reinstate Tag"}
-        </Button>
-      </IndexTable.Cell>
-    </IndexTable.Row>
-  ));
+  const rowMarkup = filteredSerials.map(
+    ({ id, serialCode, encryptionHash, productName, collectorTier, status, createdAt }, index) => (
+      <IndexTable.Row
+        id={String(id)}
+        key={id}
+        selected={selectedResources.includes(String(id))}
+        position={index}
+      >
+        <IndexTable.Cell>
+          <Text variant="bodySm" fontWeight="bold">
+            {serialCode}
+          </Text>
+        </IndexTable.Cell>
+        <IndexTable.Cell>
+          <Tooltip content={encryptionHash || "No Hash Generated"}>
+            <Text variant="bodyXs" as="span" style={{ fontFamily: "monospace", color: "var(--p-color-text-secondary)" }}>
+              {encryptionHash
+                ? `${encryptionHash.substring(0, 8)}...${encryptionHash.substring(encryptionHash.length - 6)}`
+                : "—"}
+            </Text>
+          </Tooltip>
+        </IndexTable.Cell>
+        <IndexTable.Cell>
+          <Text variant="bodySm" truncate>
+            {productName || "—"}
+          </Text>
+        </IndexTable.Cell>
+        <IndexTable.Cell>
+          <Badge tone="info">{collectorTier || "Standard"}</Badge>
+        </IndexTable.Cell>
+        <IndexTable.Cell>{renderStatusBadge(status)}</IndexTable.Cell>
+        <IndexTable.Cell>
+          <Text variant="bodyXs" tone="subdued">
+            {createdAt ? new Date(createdAt).toLocaleDateString() : "N/A"}
+          </Text>
+        </IndexTable.Cell>
+        <IndexTable.Cell>
+          <Button
+            size="slim"
+            tone={status === "ACTIVE" ? "critical" : undefined}
+            onClick={() => handleStatusToggle(id, status)}
+          >
+            {status === "ACTIVE" ? "Revoke Tag" : "Reinstate Tag"}
+          </Button>
+        </IndexTable.Cell>
+      </IndexTable.Row>
+    )
+  );
 
   return (
     <Page
@@ -445,7 +463,7 @@ export default function VaultDashboard() {
                       <TextField
                         label="Search"
                         labelHidden
-                        placeholder="Search serial or product..."
+                        placeholder="Search serial, hash, or product..."
                         value={searchQuery}
                         onChange={setSearchQuery}
                         clearButton
@@ -492,6 +510,7 @@ export default function VaultDashboard() {
                     onSelectionChange={handleSelectionChange}
                     headings={[
                       { title: "Serial Code" },
+                      { title: "Security Hash" },
                       { title: "Product Title" },
                       { title: "Collector Tier" },
                       { title: "Status" },
@@ -592,6 +611,14 @@ export default function VaultDashboard() {
               value={serialCode}
               onChange={setSerialCode}
               placeholder="e.g. CB-2026-VIP-001"
+              autoComplete="off"
+            />
+            <TextField
+              label="Encryption Hash / Secret Token (Optional)"
+              value={customHash}
+              onChange={setCustomHash}
+              placeholder="Leave blank to auto-generate crypto hash"
+              helpText="If left empty, a secure UUID hash will be created automatically."
               autoComplete="off"
             />
             <TextField
