@@ -32,7 +32,6 @@ import { desc, eq } from "drizzle-orm";
 export async function loader({ request }) {
   const { admin, session } = await authenticate.admin(request);
 
-  // Extract the current active tunnel host URL from incoming request headers
   const url = new URL(request.url);
   const currentAppUrl = `${url.protocol}//${url.host}`;
 
@@ -106,7 +105,7 @@ export async function loader({ request }) {
         .select({
           id: serials.id,
           serialCode: serials.serialNumber,
-          encryptionHash: serials.encryptionHash, // <-- EXPOSED ENCRYPTION HASH
+          encryptionHash: serials.encryptionHash,
           productName: products.title,
           sku: products.sku,
           collectorTier: serials.batchRelease,
@@ -117,9 +116,21 @@ export async function loader({ request }) {
         .leftJoin(products, eq(serials.productId, products.id))
         .orderBy(desc(serials.createdAt))
         .catch(() => []),
+
+      // JOIN verificationLogs WITH serials & products FOR EASY CROSS-REFERENCING
       db
-        .select()
+        .select({
+          id: verificationLogs.id,
+          serialId: verificationLogs.serialId,
+          serialCode: serials.serialNumber,
+          productName: products.title,
+          ipAddress: verificationLogs.ipAddress,
+          statusReturned: verificationLogs.statusReturned,
+          scannedAt: verificationLogs.scannedAt,
+        })
         .from(verificationLogs)
+        .leftJoin(serials, eq(verificationLogs.serialId, serials.id))
+        .leftJoin(products, eq(serials.productId, products.id))
         .orderBy(desc(verificationLogs.scannedAt))
         .limit(20)
         .catch(() => []),
@@ -183,7 +194,6 @@ export async function action({ request }) {
         sku: `SKU-${Math.floor(Math.random() * 90000) + 10000}`,
       });
 
-      // Use user-provided hash if available, otherwise generate a secure crypto UUID hash
       const hashToStore = customHash && customHash.trim() !== "" ? customHash.trim() : crypto.randomUUID();
 
       await db.insert(serials).values({
@@ -235,12 +245,10 @@ export default function VaultDashboard() {
 
   const fetcher = useFetcher();
 
-  // Navigation & Filter States
   const [selectedTab, setSelectedTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  // Modal Form States
   const [modalActive, setModalActive] = useState(false);
   const [serialCode, setSerialCode] = useState("");
   const [productName, setProductName] = useState("");
@@ -279,12 +287,12 @@ export default function VaultDashboard() {
     );
   };
 
-  // Filter Serials based on search query, hash, and status filter
   const filteredSerials = serials.filter((s) => {
     const matchesSearch =
       s.serialCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (s.encryptionHash && s.encryptionHash.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (s.productName && s.productName.toLowerCase().includes(searchQuery.toLowerCase()));
+      (s.productName && s.productName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (s.sku && s.sku.toLowerCase().includes(searchQuery.toLowerCase()));
 
     if (statusFilter === "active") return matchesSearch && s.status === "ACTIVE";
     if (statusFilter === "revoked") return matchesSearch && s.status === "REVOKED";
@@ -332,7 +340,7 @@ export default function VaultDashboard() {
   ];
 
   const rowMarkup = filteredSerials.map(
-    ({ id, serialCode, encryptionHash, productName, collectorTier, status, createdAt }, index) => (
+    ({ id, serialCode, encryptionHash, productName, sku, collectorTier, status, createdAt }, index) => (
       <IndexTable.Row
         id={String(id)}
         key={id}
@@ -356,6 +364,11 @@ export default function VaultDashboard() {
         <IndexTable.Cell>
           <Text variant="bodySm" truncate>
             {productName || "—"}
+          </Text>
+        </IndexTable.Cell>
+        <IndexTable.Cell>
+          <Text variant="bodyXs" style={{ fontFamily: "monospace" }}>
+            {sku || "—"}
           </Text>
         </IndexTable.Cell>
         <IndexTable.Cell>
@@ -391,7 +404,6 @@ export default function VaultDashboard() {
       }}
     >
       <BlockStack gap="400">
-        {/* Compact KPI Metric Strip */}
         <Grid>
           <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
             <Card padding="300">
@@ -451,19 +463,17 @@ export default function VaultDashboard() {
           </Banner>
         )}
 
-        {/* Compact Navigation Tabs Card */}
         <Card padding="0">
           <Tabs tabs={tabs} selected={selectedTab} onSelect={setSelectedTab}>
             {selectedTab === 0 ? (
               <BlockStack gap="0">
-                {/* Slim Search & Filter Bar */}
                 <Box padding="300" borderBlockEndWidth="025" borderColor="border-subdued">
                   <InlineStack align="space-between" blockAlign="center" gap="300">
                     <Box width="260px">
                       <TextField
                         label="Search"
                         labelHidden
-                        placeholder="Search serial, hash, or product..."
+                        placeholder="Search serial, SKU, or product..."
                         value={searchQuery}
                         onChange={setSearchQuery}
                         clearButton
@@ -499,9 +509,9 @@ export default function VaultDashboard() {
                   </InlineStack>
                 </Box>
 
-                {/* High-Density Artifact Table */}
                 {filteredSerials.length > 0 ? (
                   <IndexTable
+                    selectable={false}
                     resourceName={resourceName}
                     itemCount={filteredSerials.length}
                     selectedItemsCount={
@@ -512,6 +522,7 @@ export default function VaultDashboard() {
                       { title: "Serial Code" },
                       { title: "Security Hash" },
                       { title: "Product Title" },
+                      { title: "SKU" },
                       { title: "Collector Tier" },
                       { title: "Status" },
                       { title: "Mint Date" },
@@ -538,7 +549,6 @@ export default function VaultDashboard() {
                 )}
               </BlockStack>
             ) : (
-              /* High-Density Telemetry Logs View */
               <Box padding="300">
                 <BlockStack gap="300">
                   <InlineStack align="space-between" blockAlign="center">
@@ -564,11 +574,18 @@ export default function VaultDashboard() {
                           <BlockStack gap="050">
                             <InlineStack align="space-between" blockAlign="center">
                               <Text variant="bodySm" fontWeight="bold">
-                                IP: {log.ipAddress || "127.0.0.1"}
+                                Code: {log.serialCode || "Unknown Serial"} ({log.productName || "N/A"})
                               </Text>
                               {renderActionBadge(log.statusReturned)}
                             </InlineStack>
-                            <Text variant="bodyXs">Serial ID: {log.serialId}</Text>
+                            <InlineStack align="space-between">
+                              <Text variant="bodyXs" tone="subdued">
+                                IP: {log.ipAddress || "127.0.0.1"}
+                              </Text>
+                              <Text variant="bodyXs" tone="subdued">
+                                ID: {log.serialId}
+                              </Text>
+                            </InlineStack>
                             <Text variant="bodyXs" tone="subdued">
                               {log.scannedAt ? new Date(log.scannedAt).toLocaleString() : "N/A"}
                             </Text>
@@ -588,7 +605,6 @@ export default function VaultDashboard() {
         </Card>
       </BlockStack>
 
-      {/* Mint Serial Modal */}
       <Modal
         open={modalActive}
         onClose={handleModalChange}

@@ -232,9 +232,8 @@
     const verifyBtn = document.getElementById('SaVerifyBtn');
     if (!verifyBtn) return;
 
-    // Replace with your app's public Cloudflare tunnel / app URL
-    // e.g. 'https://absent-toolbar-heading-knows.trycloudflare.com'
-    const APP_URL = 'https://terry-fits-retrieval-mac.trycloudflare.com'; 
+    // Automatically retrieved from shop metafield synced by the backend app
+    const APP_URL = '{{ shop.metafields.custom.app_url | default: "" }}';
 
     verifyBtn.addEventListener('click', async () => {
       const serialInput = document.getElementById('SaSerialInput').value.trim().toUpperCase();
@@ -247,6 +246,11 @@
 
       if (!serialInput) {
         alert('PLEASE ENTER A VALID ARTIFACT SERIAL NUMBER.');
+        return;
+      }
+
+      if (!APP_URL) {
+        alert('VAULT REGISTRY URL NOT SYNCED. Please open your Shopify App Dashboard in Admin to initialize connection.');
         return;
       }
 
@@ -269,7 +273,7 @@
       appendLog(`> PARSING ARTIFACT CREDENTIAL: ${serialInput}`);
 
       try {
-        // Query the app backend
+        // Query the app backend via dynamic tunnel URL
         const response = await fetch(`${APP_URL}/api/verify?serial=${encodeURIComponent(serialInput)}`);
         const data = await response.json();
 
@@ -285,12 +289,16 @@
             batchEl.textContent = data.batch || '--';
             hashEl.textContent = data.hash || '--';
           } else {
-            appendLog(`> ALERT: REGISTRY MISMATCH DETECTED`, '#ef4444');
+            // Checks if it's explicitly a revoked status warning vs an invalid/unregistered item
+            const isRevoked = data.status && data.status.includes('REVOKED');
+            
+            appendLog(isRevoked ? `> ALERT: REVOKED CREDENTIAL ENCOUNTERED` : `> ALERT: REGISTRY MISMATCH DETECTED`, '#ef4444');
             statusEl.textContent = data.status || '[ UNVERIFIED ]';
             statusEl.style.color = '#ef4444'; // Red
-            modelEl.textContent = 'UNKNOWN ARTIFACT';
-            batchEl.textContent = 'UNAUTHORISED / INVALID';
-            hashEl.textContent = 'N/A';
+            
+            modelEl.textContent = data.model && data.model !== "Unassigned Model" ? data.model : 'UNKNOWN ARTIFACT';
+            batchEl.textContent = data.batch && data.batch !== "N/A" ? data.batch : 'UNAUTHORISED / INVALID';
+            hashEl.textContent = data.hash && data.hash !== "N/A" ? data.hash : 'N/A';
           }
 
           resultBox.style.display = 'flex';
